@@ -26,7 +26,7 @@ A JavaFX-based desktop application for photo management, digital image processin
 | Email | Jakarta Mail | 2.0.1 |
 | Build Tool | Apache Maven | 3.9.x |
 
-Full library justifications and API reference: [`docs/TechStack_v1.0.pdf`](docs/TechStack_v1.0.pdf)
+Full library justifications and API reference: [`docs/TechStack_v1.0.pdf`](docs/WIG3003_TechStack_v1.0.pdf)
 
 ---
 
