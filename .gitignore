@@ -1,0 +1,23 @@
+# Maven build output
+target/
+
+# data/ directory — local only, never commit (per github_readme.pdf)
+data/
+
+# VS Code
+.vscode/
+
+# IntelliJ (in case any member uses it)
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Email credentials — never commit
+email.properties
+*.env
+
+# Compiled Java (redundant with target/ but explicit)
+*.class
