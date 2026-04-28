@@ -66,11 +66,24 @@
       <version>5.10.2</version>
       <scope>test</scope>
     </dependency>
+    <!-- Engine required for Maven Surefire to discover and run JUnit 5 tests -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 
   <build>
     <plugins>
+      <!-- Surefire 2.22+ is required to run JUnit 5 tests via Maven -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+      </plugin>
       <plugin>
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-maven-plugin</artifactId>
