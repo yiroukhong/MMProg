@@ -312,6 +312,23 @@
     -fx-effect: dropshadow(gaussian, rgba(60, 40, 20, 0.14), 10, 0, 0, 3);
 }
 
+/* Annotation badge (thumbnail, bottom-right) */
+.annotation-badge {
+    -fx-background-color: rgba(255, 255, 255, 0.92);
+    -fx-background-radius: 999;
+    -fx-min-width: 26;
+    -fx-min-height: 26;
+    -fx-max-width: 26;
+    -fx-max-height: 26;
+    -fx-alignment: CENTER;
+    -fx-effect: dropshadow(gaussian, rgba(60, 40, 20, 0.12), 4, 0, 0, 1);
+}
+
+.annotation-badge-label {
+    -fx-text-fill: #6B6051;
+    -fx-font-size: 11px;
+}
+
 /* Heart badge */
 .heart-badge {
     -fx-background-color: rgba(255, 255, 255, 0.92);
@@ -419,4 +436,36 @@
     -fx-background-color: #1F1B16;
     -fx-alignment: CENTER;
     -fx-padding: 24;
+}
+
+/* === Annotation Panel =================================== */
+.annotation-panel {
+    -fx-background-color: #FBF8F3;
+    -fx-border-color: #ECE4D3 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 12 20 16 20;
+    -fx-spacing: 8;
+}
+
+.annotation-section-label {
+    -fx-text-fill: #9C907D;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+.annotation-field {
+    -fx-background-color: white;
+    -fx-border-color: #DDD2BC;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-font-size: 13px;
+    -fx-text-fill: #1F1B16;
+    -fx-prompt-text-fill: #9C907D;
+    -fx-pref-height: 90;
+}
+
+.annotation-field:focused {
+    -fx-border-color: #B8AB91;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
 }

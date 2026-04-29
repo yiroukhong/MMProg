@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
 
+import com.wig3003.photoapp.model.MetadataStore;
 import com.wig3003.photoapp.util.ImageUtils;
 
 import javafx.application.Platform;
@@ -20,6 +21,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.image.Image;
@@ -66,6 +68,7 @@ public class MainController implements Initializable {
     @FXML private Button heartButton;
     @FXML private StackPane detailImageArea;
     @FXML private ImageView detailImageView;
+    @FXML private TextArea annotationField;
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -80,6 +83,9 @@ public class MainController implements Initializable {
 
     /** Currently selected index into displayPaths (-1 = none). */
     private int selectedIndex = -1;
+
+    /** Absolute path of the image shown in the detail view (null when in library view). */
+    private String currentPath;
 
     /** Which nav filter is active: ALL | FAVOURITES | ANNOTATED */
     private String activeFilter = "ALL";
@@ -221,7 +227,7 @@ public class MainController implements Initializable {
         for (String p : allPaths) {
             switch (activeFilter) {
                 case "FAVOURITES": if (favourites.contains(p))  displayPaths.add(p); break;
-                case "ANNOTATED":  /* wire to AnnotationStore when merged */ displayPaths.add(p); break;
+                case "ANNOTATED":  if (MetadataStore.getInstance().hasAnnotation(p)) displayPaths.add(p); break;
                 case "RECENT":     displayPaths.add(p); break; // TODO: sort by mtime
                 default:           displayPaths.add(p); break;
             }
@@ -232,15 +238,17 @@ public class MainController implements Initializable {
     }
 
     private void updateFilterLabels() {
+        int annotated = MetadataStore.getInstance().annotationCount(allPaths);
         filterAll.setText("All · " + allPaths.size());
         filterFavorites.setText("Favorites · " + favourites.size());
-        filterAnnotated.setText("Annotated · 0");
+        filterAnnotated.setText("Annotated · " + annotated);
     }
 
     private void updateCounts() {
+        int annotated = MetadataStore.getInstance().annotationCount(allPaths);
         countLibrary.setText(String.valueOf(allPaths.size()));
         countFavorites.setText(String.valueOf(favourites.size()));
-        countAnnotated.setText("0");
+        countAnnotated.setText(String.valueOf(annotated));
         updateFilterLabels();
     }
 
@@ -297,6 +305,11 @@ public class MainController implements Initializable {
             cell.getChildren().add(buildHeartBadge());
         }
 
+        // Annotation badge (shown when annotated)
+        if (MetadataStore.getInstance().hasAnnotation(path)) {
+            cell.getChildren().add(buildAnnotationBadge());
+        }
+
         // Selection overlay — brown stroke drawn on top of the image
         Rectangle selectionOverlay = new Rectangle(thumbSize, thumbSize);
         selectionOverlay.setArcWidth(16);
@@ -330,6 +343,17 @@ public class MainController implements Initializable {
         badge.getStyleClass().add("heart-badge");
         StackPane.setAlignment(badge, Pos.TOP_RIGHT);
         StackPane.setMargin(badge, new Insets(8, 8, 0, 0));
+        return badge;
+    }
+
+    private StackPane buildAnnotationBadge() {
+        Label icon = new Label("✏");
+        icon.getStyleClass().add("annotation-badge-label");
+
+        StackPane badge = new StackPane(icon);
+        badge.getStyleClass().add("annotation-badge");
+        StackPane.setAlignment(badge, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(badge, new Insets(0, 8, 8, 0));
         return badge;
     }
 
@@ -393,7 +417,9 @@ public class MainController implements Initializable {
     private void openDetail(int index) {
         if (index < 0 || index >= displayPaths.size()) return;
         selectedIndex = index;
-        loadDetailImage(displayPaths.get(index));
+        currentPath = displayPaths.get(index);
+        loadDetailImage(currentPath);
+        loadAnnotationForImage(currentPath);
         showDetailView();
     }
 
@@ -467,10 +493,41 @@ public class MainController implements Initializable {
         }
     }
 
+    // ── Annotation ────────────────────────────────────────────────────────────
+
+    private void loadAnnotationForImage(String path) {
+        String text = MetadataStore.getInstance().getAnnotation(path);
+        annotationField.setText(text != null ? text : "");
+    }
+
+    @FXML
+    private void handleSaveAnnotation() {
+        if (currentPath == null) return;
+        MetadataStore.getInstance().saveAnnotation(currentPath, annotationField.getText());
+        refreshAnnotationState();
+    }
+
+    @FXML
+    private void handleDeleteAnnotation() {
+        if (currentPath == null) return;
+        MetadataStore.getInstance().deleteAnnotation(currentPath);
+        annotationField.clear();
+        refreshAnnotationState();
+    }
+
+    /** Rebuilds thumbnail grid and sidebar counts to reflect annotation changes. */
+    private void refreshAnnotationState() {
+        updateCounts();
+        refreshGrid();
+        if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
+            selectImage(selectedIndex);
+        }
+    }
+
     // ── Stub handlers (wired by other modules) ────────────────────────────────
 
     @FXML private void handleNewMosaic() { /* Multimedia module */ }
-    @FXML private void handleAnnotate()  { /* Annotation module (Yirou Task 3) */ }
+    @FXML private void handleAnnotate()  { annotationField.requestFocus(); }
     @FXML private void handleShare()     { /* Social module */ }
     @FXML private void handleSearch()    { /* search logic */ }
 

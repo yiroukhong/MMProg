@@ -4,6 +4,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
@@ -237,6 +238,21 @@
                                preserveRatio="true" smooth="true"
                                pickOnBounds="true"/>
                 </StackPane>
+
+                <!-- Annotation panel -->
+                <VBox styleClass="annotation-panel">
+                    <Label text="ANNOTATION" styleClass="annotation-section-label"/>
+                    <TextArea fx:id="annotationField"
+                              styleClass="annotation-field"
+                              promptText="Add a note to this image…"
+                              wrapText="true"/>
+                    <HBox styleClass="annotation-actions" spacing="8" alignment="CENTER_LEFT">
+                        <Button text="Save note" styleClass="btn-primary"
+                                onAction="#handleSaveAnnotation"/>
+                        <Button text="Delete" styleClass="btn-secondary"
+                                onAction="#handleDeleteAnnotation"/>
+                    </HBox>
+                </VBox>
 
             </VBox>
 
