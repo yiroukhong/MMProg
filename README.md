@@ -1,4 +1,4 @@
-# WIG3003-PhotoApp
+# Vi-Flow
 
 A JavaFX-based desktop application for photo management, digital image processing, and multimedia synthesis. Built as a group project for WIG3003 Multimedia Programming (2026).
 
