@@ -222,9 +222,6 @@
                            styleClass="detail-dimensions"/>
                     <Button fx:id="heartButton" styleClass="heart-btn"
                             onAction="#handleToggleFavourite">
-                        <graphic>
-                            <FontIcon iconLiteral="far-heart" iconSize="18"/>
-                        </graphic>
                     </Button>
                     <Button text="Annotate" styleClass="btn-secondary"
                             onAction="#handleAnnotate"/>

@@ -288,6 +288,20 @@
     -fx-alignment: TOP_LEFT;
 }
 
+/* Wrapper for your image thumbnails */
+.photo-thumbnail {
+    -fx-border-color: transparent;
+    -fx-border-width: 3px;
+    -fx-border-radius: 4px;
+    -fx-padding: 2px;
+    -fx-cursor: hand;
+}
+
+/* The style applied when a photo is selected */
+.photo-thumbnail.selected {
+    -fx-border-color: #007bff; /* Your preferred accent color */
+}
+
 .thumbnail-cell {
     -fx-background-color: #ECE4D3;
     -fx-background-radius: 8;
@@ -296,13 +310,6 @@
 
 .thumbnail-cell:hover {
     -fx-effect: dropshadow(gaussian, rgba(60, 40, 20, 0.14), 10, 0, 0, 3);
-}
-
-.thumbnail-cell.selected {
-    -fx-border-color: #C8623F;
-    -fx-border-width: 2.5;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
 }
 
 /* Heart badge */

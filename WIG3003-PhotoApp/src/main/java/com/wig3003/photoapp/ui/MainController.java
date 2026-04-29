@@ -30,7 +30,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.StrokeType;
 import javafx.stage.DirectoryChooser;
 
 public class MainController implements Initializable {
@@ -70,9 +72,11 @@ public class MainController implements Initializable {
     private static final String[] IMAGE_EXTS =
             { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tiff", ".tif", ".heic" };
 
-    private final List<String>  allPaths      = new ArrayList<>();
-    private final List<String>  displayPaths  = new ArrayList<>();
-    private final Set<String>   favourites    = new HashSet<>();
+    private final List<String>     allPaths         = new ArrayList<>();
+    private final List<String>     displayPaths     = new ArrayList<>();
+    private final Set<String>      favourites       = new HashSet<>();
+    private final Set<Integer>     selectedIndices  = new HashSet<>();
+    private final List<Rectangle>  selectionOverlays = new ArrayList<>();
 
     /** Currently selected index into displayPaths (-1 = none). */
     private int selectedIndex = -1;
@@ -211,6 +215,7 @@ public class MainController implements Initializable {
     private void applyFilter() {
         displayPaths.clear();
         selectedIndex = -1;
+        selectedIndices.clear();
         selectedCountLabel.setText("");
 
         for (String p : allPaths) {
@@ -243,6 +248,7 @@ public class MainController implements Initializable {
 
     private void refreshGrid() {
         photoGrid.getChildren().clear();
+        selectionOverlays.clear();
 
         if (displayPaths.isEmpty()) {
             showEmptyState(true);
@@ -284,17 +290,30 @@ public class MainController implements Initializable {
         iv.setPreserveRatio(false);
         iv.setSmooth(true);
         cell.getChildren().add(iv);
+        
 
         // Heart badge (shown when favourited)
         if (favourites.contains(path)) {
             cell.getChildren().add(buildHeartBadge());
         }
 
+        // Selection overlay — brown stroke drawn on top of the image
+        Rectangle selectionOverlay = new Rectangle(thumbSize, thumbSize);
+        selectionOverlay.setArcWidth(16);
+        selectionOverlay.setArcHeight(16);
+        selectionOverlay.setFill(Color.TRANSPARENT);
+        selectionOverlay.setStroke(Color.TRANSPARENT);
+        selectionOverlay.setStrokeWidth(3.5);
+        selectionOverlay.setStrokeType(StrokeType.INSIDE);
+        selectionOverlay.setMouseTransparent(true);
+        cell.getChildren().add(selectionOverlay);
+        selectionOverlays.add(selectionOverlay);
+
         // Click handlers
         cell.setOnMouseClicked(e -> {
             if (e.getButton() != MouseButton.PRIMARY) return;
             if (e.getClickCount() == 1) {
-                selectImage(index);
+                selectImage(index, e.isShiftDown());
             } else if (e.getClickCount() == 2) {
                 openDetail(index);
             }
@@ -317,29 +336,44 @@ public class MainController implements Initializable {
     // ── Selection ─────────────────────────────────────────────────────────────
 
     private void selectImage(int index) {
+        selectImage(index, false);
+    }
+
+    private void selectImage(int index, boolean shiftDown) {
         if (index < 0 || index >= displayPaths.size()) return;
 
-        // Remove selection style from previously selected cell
-        clearSelectionStyle();
+        if (!shiftDown || selectedIndex == -1) {
+            clearSelectionStyle();
+            selectedIndices.add(index);
+            selectedIndex = index;
+            setOverlaySelected(index, true);
+        } else {
+            clearSelectionStyle();
+            int start = Math.min(selectedIndex, index);
+            int end = Math.max(selectedIndex, index);
+            for (int i = start; i <= end; i++) {
+                selectedIndices.add(i);
+                setOverlaySelected(i, true);
+            }
+        }
 
-        selectedIndex = index;
-
-        // Add selection style to the new cell
-        Node cell = photoGrid.getChildren().get(index);
-        cell.getStyleClass().add("selected");
-
-        selectedCountLabel.setText("1 SELECTED");
-
-        // Scroll the selected cell into view
+        selectedCountLabel.setText(selectedIndices.size() + " SELECTED");
         scrollToCell(index);
     }
 
     private void clearSelectionStyle() {
-        if (selectedIndex >= 0 && selectedIndex < photoGrid.getChildren().size()) {
-            photoGrid.getChildren().get(selectedIndex).getStyleClass().remove("selected");
+        for (int i : selectedIndices) {
+            setOverlaySelected(i, false);
         }
-        selectedIndex = -1;
+        selectedIndices.clear();
         selectedCountLabel.setText("");
+    }
+
+    private void setOverlaySelected(int index, boolean selected) {
+        if (index >= 0 && index < selectionOverlays.size()) {
+            selectionOverlays.get(index).setStroke(
+                    selected ? Color.web("#8B5A2B") : Color.TRANSPARENT);
+        }
     }
 
     private void scrollToCell(int index) {
@@ -351,6 +385,7 @@ public class MainController implements Initializable {
             double vValue = (double) row / (totalRows - 1);
             gridScrollPane.setVvalue(vValue);
         }
+        
     }
 
     // ── Detail view ───────────────────────────────────────────────────────────
@@ -459,7 +494,7 @@ public class MainController implements Initializable {
                 case UP:    navigateGrid(-cols);  break;
                 case DOWN:  navigateGrid(+cols);  break;
                 case ENTER: if (selectedIndex >= 0) openDetail(selectedIndex); break;
-                case ESCAPE: clearSelectionStyle(); break;
+                case ESCAPE: clearSelectionStyle(); selectedIndex = -1; break;
                 default: break;
             }
         }
