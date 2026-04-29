@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.TilePane?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.wig3003.photoapp.ui.MainController"
+            styleClass="root-pane">
+
+    <fx:define>
+        <ToggleGroup fx:id="filterGroup"/>
+    </fx:define>
+
+    <!-- ═══════════════════════════════════════════════════════
+         LEFT SIDEBAR
+         ═══════════════════════════════════════════════════════ -->
+    <left>
+        <VBox styleClass="sidebar">
+
+            <!-- Brand -->
+            <HBox styleClass="brand-row">
+                <StackPane styleClass="brand-icon-box">
+                    <Label text="V" styleClass="brand-icon"/>
+                </StackPane>
+                <Label text="Vi-Flow" styleClass="brand-name"/>
+            </HBox>
+
+            <!-- LIBRARY section -->
+            <Label text="LIBRARY" styleClass="nav-section-label"/>
+
+            <HBox fx:id="navLibrary" styleClass="nav-item"
+                  alignment="CENTER_LEFT" spacing="12"
+                  onMouseClicked="#handleNavLibrary">
+                <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
+                <FontIcon iconLiteral="bi-columns" iconSize="16" styleClass="nav-icon-label"/>
+                <Label text="Library" styleClass="nav-label">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </Label>
+                <Label fx:id="countLibrary" text="0" styleClass="nav-count"/>
+            </HBox>
+
+            <HBox fx:id="navFavorites" styleClass="nav-item"
+                  alignment="CENTER_LEFT" spacing="12"
+                  onMouseClicked="#handleNavFavorites">
+                <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
+                <FontIcon iconLiteral="bi-heart" iconSize="16" styleClass="nav-icon-label"/>
+                <Label text="Favorites" styleClass="nav-label">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </Label>
+                <Label fx:id="countFavorites" text="0" styleClass="nav-count"/>
+            </HBox>
+
+            <HBox fx:id="navAnnotated" styleClass="nav-item"
+                  alignment="CENTER_LEFT" spacing="12"
+                  onMouseClicked="#handleNavAnnotated">
+                <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
+                <FontIcon iconLiteral="bi-pencil-square" iconSize="16" styleClass="nav-icon-label"/>
+                <Label text="Annotated" styleClass="nav-label">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </Label>
+                <Label fx:id="countAnnotated" text="0" styleClass="nav-count"/>
+            </HBox>
+
+            <!-- STUDIO section -->
+            <Label text="STUDIO" styleClass="nav-section-label"/>
+
+            <HBox styleClass="nav-item" onMouseClicked="#handleNavEdit">
+                <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
+                <FontIcon iconLiteral="bi-circle-square" iconSize="16" styleClass="nav-icon-label"/>
+                <Label text="Edit" styleClass="nav-label">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </Label>
+            </HBox>
+
+            <HBox styleClass="nav-item" onMouseClicked="#handleNavMosaic">
+                <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
+                <FontIcon iconLiteral="bi-grid" iconSize="16" styleClass="nav-icon-label"/>
+                <Label text="Mosaic" styleClass="nav-label">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </Label>
+                <Label text="0" styleClass="nav-count"/>
+            </HBox>
+
+            <HBox styleClass="nav-item" onMouseClicked="#handleNavVideo">
+                <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
+                <FontIcon iconLiteral="bi-camera-video" iconSize="16" styleClass="nav-icon-label"/>
+                <Label text="Video" styleClass="nav-label">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </Label>
+                <Label text="0" styleClass="nav-count"/>
+            </HBox>
+
+            <HBox styleClass="nav-item" onMouseClicked="#handleNavShare">
+                <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
+                <FontIcon iconLiteral="bi-share" iconSize="16" styleClass="nav-icon-label"/>
+                <Label text="Share" styleClass="nav-label">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </Label>
+            </HBox>
+
+        </VBox>
+    </left>
+
+    <!-- ═══════════════════════════════════════════════════════
+         CENTER — Library view  ↔  Detail view
+         ═══════════════════════════════════════════════════════ -->
+    <center>
+        <StackPane>
+
+            <!-- ─── LIBRARY VIEW ─────────────────────────────── -->
+            <VBox fx:id="libraryView" styleClass="content-area">
+
+                <!-- Header bar -->
+                <HBox styleClass="content-header">
+                    <Label text="Your Library" styleClass="page-title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="searchField" styleClass="search-field"
+                               promptText="Search by name, date, or tag"
+                               onAction="#handleSearch"/>
+                    <Button text="Import" styleClass="btn-secondary"
+                                    onAction="#handleImport">
+                        <graphic>
+                            <FontIcon iconLiteral="bi-box-arrow-in-down" iconSize="16"/>
+                        </graphic>
+                    </Button>
+                    <Button text="+ New Mosaic" styleClass="btn-primary"
+                            onAction="#handleNewMosaic"/>
+                </HBox>
+
+                <!-- Filter pills -->
+                <HBox styleClass="filter-bar">
+                    <ToggleButton fx:id="filterAll" text="All · 0"
+                                  styleClass="filter-pill"
+                                  selected="true"
+                                  toggleGroup="$filterGroup"
+                                  onAction="#handleFilter"/>
+                    <ToggleButton fx:id="filterAnnotated" text="Annotated · 0"
+                                  styleClass="filter-pill"
+                                  toggleGroup="$filterGroup"
+                                  onAction="#handleFilter"/>
+                    <ToggleButton fx:id="filterFavorites" text="Favorites · 0"
+                                  styleClass="filter-pill"
+                                  toggleGroup="$filterGroup"
+                                  onAction="#handleFilter"/>
+                    <ToggleButton fx:id="filterRecent" text="Recent"
+                                  styleClass="filter-pill"
+                                  toggleGroup="$filterGroup"
+                                  onAction="#handleFilter"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="selectedCountLabel" text=""
+                           styleClass="selected-count-label"/>
+                </HBox>
+
+                <!-- Grid / Empty state -->
+                <StackPane VBox.vgrow="ALWAYS">
+
+                    <!-- Thumbnail grid (hidden until images load) -->
+                    <ScrollPane fx:id="gridScrollPane"
+                                styleClass="grid-scroll-pane"
+                                fitToWidth="true"
+                                visible="false" managed="false">
+                        <TilePane fx:id="photoGrid"
+                                  styleClass="photo-grid"
+                                  prefColumns="5"
+                                  hgap="8" vgap="8"/>
+                    </ScrollPane>
+
+                    <!-- Empty state -->
+                    <VBox fx:id="emptyState" styleClass="empty-state"
+                          alignment="CENTER" spacing="12">
+                        <StackPane styleClass="empty-icon-bg" alignment="CENTER">
+                            <FontIcon iconLiteral="bi-images" iconSize="48" styleClass="empty-icon"/>
+                        </StackPane>
+                        <Label text="No photos yet." styleClass="empty-title"/>
+                        <Label styleClass="empty-body" textAlignment="CENTER"
+                               text="Drop a folder anywhere on this window, or use&#10;import to point Vi-Flow at your photo library"
+                               wrapText="true"/>
+                        <HBox styleClass="empty-buttons">
+                            <Button text="Browse" styleClass="btn-secondary"
+                                    onAction="#handleBrowse">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-folder" iconSize="16"/>
+                                </graphic>
+                            </Button>
+                            <Button text="Import folder" styleClass="btn-primary"
+                                    onAction="#handleImport">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-box-arrow-in-down" iconSize="16" iconColor="WHITE" />
+                                </graphic>
+                            </Button>
+                        </HBox>
+                    </VBox>
+
+                </StackPane>
+            </VBox>
+
+            <!-- ─── DETAIL VIEW ───────────────────────────────── -->
+            <VBox fx:id="detailView" styleClass="detail-view"
+                  visible="false" managed="false">
+
+                <!-- Detail header -->
+                <!-- Detail header -->
+                <HBox styleClass="detail-header">
+                    <Label fx:id="detailFilename" text=""
+                           styleClass="detail-filename"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="detailDimensions" text=""
+                           styleClass="detail-dimensions"/>
+                    <Button fx:id="heartButton" styleClass="heart-btn"
+                            onAction="#handleToggleFavourite">
+                    </Button>
+                    <Button text="Annotate" styleClass="btn-secondary"
+                            onAction="#handleAnnotate"/>
+                    <Button text="Share" styleClass="btn-secondary"
+                            onAction="#handleShare"/>
+                </HBox>
+
+                <!-- Full-res image area (dark canvas) -->
+                <StackPane fx:id="detailImageArea"
+                           styleClass="detail-image-area"
+                           VBox.vgrow="ALWAYS">
+                    <ImageView fx:id="detailImageView"
+                               preserveRatio="true" smooth="true"
+                               pickOnBounds="true"/>
+                </StackPane>
+
+                <!-- Annotation panel -->
+                <VBox styleClass="annotation-panel">
+                    <Label text="ANNOTATION" styleClass="annotation-section-label"/>
+                    <TextArea fx:id="annotationField"
+                              styleClass="annotation-field"
+                              promptText="Add a note to this image…"
+                              wrapText="true"/>
+                    <HBox styleClass="annotation-actions" spacing="8" alignment="CENTER_LEFT">
+                        <Button text="Save note" styleClass="btn-primary"
+                                onAction="#handleSaveAnnotation"/>
+                        <Button text="Delete" styleClass="btn-secondary"
+                                onAction="#handleDeleteAnnotation"/>
+                    </HBox>
+                </VBox>
+
+            </VBox>
+
+        </StackPane>
+    </center>
+
+</BorderPane>
