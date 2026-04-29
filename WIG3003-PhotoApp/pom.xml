@@ -37,6 +37,21 @@
       <artifactId>javafx-swing</artifactId>
       <version>${javafx.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.kordamp.ikonli</groupId>
+      <artifactId>ikonli-bootstrapicons-pack</artifactId>
+      <version>12.4.0</version>
+  </dependency>
+    <dependency>
+        <groupId>org.kordamp.ikonli</groupId>
+        <artifactId>ikonli-javafx</artifactId>
+        <version>12.4.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.kordamp.ikonli</groupId>
+        <artifactId>ikonli-fontawesome5-pack</artifactId> <!-- Assuming you use fas-* and far-* icons -->
+        <version>12.4.0</version>
+    </dependency>
 
     <!-- OpenCV via openpnp (bundles native libs, no manual install needed) -->
     <dependency>
