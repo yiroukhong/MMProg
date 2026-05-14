@@ -28,6 +28,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
@@ -36,6 +37,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.DirectoryChooser;
+
+// CW: added imports for DipEdit navigation
+import com.wig3003.photoapp.dip.DipEditController;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+// CW: change end
+
 
 public class MainController implements Initializable {
 
@@ -93,6 +101,15 @@ public class MainController implements Initializable {
     /** Pixel size of each thumbnail tile (square). Recalculated on resize. */
     private double thumbSize = 185;
 
+    // CW: cached DipEdit module - load once, reuse on tab switch
+    private Parent            dipEditRoot;
+    private DipEditController dipEditController;
+    // cached BorderPane root - stored once scene is available
+    // Safe to use anytime unlike libraryView.getScene() which returns
+    // null when libraryView is swapped out of the BorderPane center
+    private BorderPane mainRoot;
+    // CW: change end
+
     // ── Initialise ────────────────────────────────────────────────────────────
 
     @Override
@@ -111,12 +128,21 @@ public class MainController implements Initializable {
         detailImageView.fitHeightProperty().bind(
                 detailImageArea.heightProperty().subtract(48));
 
-        // Scene-level keyboard handler (attached once scene is available)
-        libraryView.sceneProperty().addListener((obs, old, scene) -> {
-            if (scene != null) {
-                scene.setOnKeyPressed(e -> handleKeyPress(e.getCode()));
+        // CW: cache the BorderPane root once the scene is attached
+            // so navigateToDipEdit and showLibraryView can always access it
+            // even when libraryView is removed from the scene center
+        libraryView.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null && mainRoot == null) {
+                mainRoot = (BorderPane) newScene.getRoot();
             }
         });
+        // CW: change end
+
+        // CW: load saved Vi-Flow library images on startup
+        loadAppLibrary();
+        // CW: change end
+
+
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
@@ -125,7 +151,9 @@ public class MainController implements Initializable {
     private void handleNavLibrary() {
         setNavActive(navLibrary);
         activeFilter = "ALL";
-        applyFilter();
+        // CW: refresh app library images saved by Geometric / Extraction
+        loadAppLibrary();
+        // CW: change end
         showLibraryView();
     }
 
@@ -148,7 +176,79 @@ public class MainController implements Initializable {
     }
 
     // Stub handlers for STUDIO items — other modules will wire these
-    @FXML private void handleNavEdit()   { /* wired by DIP module */ }
+    
+    
+// =========Chyntia: Edit begin
+    // CW: loads images saved by Save to Library into the app Library page
+    private void loadAppLibrary() {
+        allPaths.clear();
+        selectedIndex = -1;
+        selectedIndices.clear();
+        selectedCountLabel.setText("");
+
+        allPaths.addAll(MetadataStore.getInstance().getLibraryPaths());
+
+        applyFilter();
+        updateCounts();
+    }
+    // CW: change end
+
+    @FXML
+    private void handleNavEdit() {
+        navigateToDipEdit("Geometric");
+    }
+
+    @FXML
+    private void handleNavExtract() {
+        navigateToDipEdit("Extraction");
+    }
+
+    // CW: new method - load DipEdit once, swap BorderPane center
+    private void navigateToDipEdit(String tabName) {
+        // CW: use cached mainRoot - never call libraryView.getScene()
+        // here because libraryView may already be detached from the scene
+        if (mainRoot == null) return;
+ 
+        try {
+            if (dipEditRoot == null) {
+                FXMLLoader loader = new FXMLLoader(
+                        getClass().getResource(
+                                "/com/wig3003/photoapp/fxml/DipEdit.fxml"));
+                dipEditRoot       = loader.load();
+                dipEditController = (DipEditController) loader.getController();
+            }
+ 
+            String pathToPass = currentPath != null ? currentPath
+                    : (selectedIndex >= 0 && selectedIndex < displayPaths.size()
+                            ? displayPaths.get(selectedIndex) : null);
+ 
+            if (pathToPass != null)
+                dipEditController.setInitialImage(pathToPass);
+ 
+            dipEditController.selectTab(tabName);
+            mainRoot.setCenter(dipEditRoot);
+ 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    // CW: change end
+
+    // CW: new method - restore library StackPane back into BorderPane center
+    private void restoreLibraryCenter() {
+        if (mainRoot == null) return;
+        javafx.scene.Parent parent = libraryView.getParent();
+        if (parent instanceof StackPane) {
+            mainRoot.setCenter((StackPane) parent);
+        } else {
+            mainRoot.setCenter(parent != null ? parent : libraryView);
+        }
+    }
+    // CW: change end
+
+    
+// =========Chyntia: Edit end
+
     @FXML private void handleNavMosaic() { /* wired by Multimedia module */ }
     @FXML private void handleNavVideo()  { /* wired by Multimedia module */ }
     @FXML private void handleNavShare()  { /* wired by Social module */ }
@@ -195,9 +295,18 @@ public class MainController implements Initializable {
             }
         }
 
+        // CW: remember imported folder images as app library images
+        MetadataStore.getInstance().saveLibraryImagePaths(allPaths);
+        // CW: change end
+
+
         applyFilter();
         updateCounts();
     }
+
+    
+
+
 
     private boolean isImageFile(String name) {
         String lower = name.toLowerCase();
@@ -460,12 +569,22 @@ public class MainController implements Initializable {
         detailView.setManaged(true);
     }
 
+    // CW: extended to restore BorderPane center when returning from DipEdit
     private void showLibraryView() {
         detailView.setVisible(false);
         detailView.setManaged(false);
         libraryView.setVisible(true);
         libraryView.setManaged(true);
+ 
+        // CW: use mainRoot - safe even when libraryView is detached from scene
+        if (mainRoot != null && dipEditRoot != null
+                && mainRoot.getCenter() == dipEditRoot) {
+            restoreLibraryCenter();
+        }
     }
+    // CW: change end
+    
+
 
     // ── Favourites toggle ─────────────────────────────────────────────────────
 
@@ -569,4 +688,24 @@ public class MainController implements Initializable {
         if (next < 0 || next >= displayPaths.size()) return;
         openDetail(next);
     }
+
+    // CW: 
+    // ── Application shutdown ──────────────────────────────────────────────────
+ 
+    /**
+     * Call this from the primary stage's setOnCloseRequest handler.
+     * Shuts down the DipEdit module's background threads and releases
+     * OpenCV Mat memory cleanly before the JVM exits.
+     *
+     * Example in MainApp.java:
+     *   primaryStage.setOnCloseRequest(e -> mainController.onAppClose());
+     */
+    public void onAppClose() {
+        if (dipEditController != null) {
+            try {
+                dipEditController.shutdown();
+            } catch (Exception ignored) {}
+        }
+    }
+    // CW: change end
 }
