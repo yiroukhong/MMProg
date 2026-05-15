@@ -87,7 +87,7 @@
                 </Label>
             </HBox>
 
-            <HBox styleClass="nav-item" onMouseClicked="#handleNavMosaic">
+            <HBox fx:id="navMosaic" styleClass="nav-item" onMouseClicked="#handleNavMosaic">
                 <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
                 <FontIcon iconLiteral="bi-grid" iconSize="16" styleClass="nav-icon-label"/>
                 <Label text="Mosaic" styleClass="nav-label">
@@ -255,6 +255,11 @@
                 </VBox>
 
             </VBox>
+
+            <!-- ─── MOSAIC VIEW ───────────────────────────── -->
+            <fx:include fx:id="mosaicView"
+                        source="MosaicView.fxml"
+                        visible="false" managed="false"/>
 
         </StackPane>
     </center>
