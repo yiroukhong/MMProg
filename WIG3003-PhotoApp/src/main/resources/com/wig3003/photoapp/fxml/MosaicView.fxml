@@ -126,6 +126,23 @@
                                           -fx-min-width:28;"/>
                         </HBox>
 
+                        <Label text="Tile size"
+                               style="-fx-font-size:10;
+                                      -fx-font-weight:bold;
+                                      -fx-text-fill:#1F1B16;
+                                      -fx-padding:8 0 6 0;"/>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Slider fx:id="tileSizeSlider"
+                                    min="80" max="400" value="200"
+                                    HBox.hgrow="ALWAYS"
+                                    blockIncrement="10"/>
+                            <Label fx:id="tileSizeLabel" text="200 px"
+                                   style="-fx-font-size:11;
+                                          -fx-font-weight:bold;
+                                          -fx-text-fill:#C8623F;
+                                          -fx-min-width:46;"/>
+                        </HBox>
+
                         <Label text="Tile gap"
                                style="-fx-font-size:10;
                                       -fx-font-weight:bold;
@@ -133,23 +150,15 @@
                                       -fx-padding:8 0 6 0;"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <Slider fx:id="tileGapSlider"
-                                    min="0" max="10" value="1"
+                                    min="0" max="20" value="2"
                                     HBox.hgrow="ALWAYS"
                                     blockIncrement="1"/>
-                            <Label fx:id="tileGapLabel" text="1 px"
+                            <Label fx:id="tileGapLabel" text="2 px"
                                    style="-fx-font-size:11;
                                           -fx-font-weight:bold;
                                           -fx-text-fill:#C8623F;
                                           -fx-min-width:36;"/>
                         </HBox>
-
-                        <Label fx:id="tipLabel"
-                               text="Tip: enable strict matching on small tile pools, loose on large."
-                               wrapText="true"
-                               style="-fx-font-size:10;
-                                      -fx-text-fill:#9C907D;
-                                      -fx-padding:10 0 0 0;
-                                      -fx-max-width:240;"/>
                     </VBox>
 
                     <!-- ── SECTION 4: GENERATE ── -->

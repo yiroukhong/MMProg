@@ -66,6 +66,8 @@ public class MosaicController {
 
     @FXML private Slider columnsSlider;
     @FXML private Label  columnsLabel;
+    @FXML private Slider tileSizeSlider;
+    @FXML private Label  tileSizeLabel;
     @FXML private Slider tileGapSlider;
     @FXML private Label  tileGapLabel;
 
@@ -78,8 +80,6 @@ public class MosaicController {
     // =========================================================
     // STATE
     // =========================================================
-
-    private static final int TILE_SIZE = 80;
 
     private List<String> tilePaths      = new ArrayList<>();
     private List<String> libraryPaths   = new ArrayList<>();
@@ -102,6 +102,9 @@ public class MosaicController {
     public void initialize() {
         columnsSlider.valueProperty().addListener((obs, ov, nv) ->
                 columnsLabel.setText(String.valueOf(nv.intValue())));
+
+        tileSizeSlider.valueProperty().addListener((obs, ov, nv) ->
+                tileSizeLabel.setText(nv.intValue() + " px"));
 
         tileGapSlider.valueProperty().addListener((obs, ov, nv) ->
                 tileGapLabel.setText(nv.intValue() + " px"));
@@ -234,11 +237,12 @@ public class MosaicController {
         }
 
         final int          columns       = Math.max(1, (int) columnsSlider.getValue());
+        final int          tileSize      = Math.max(10, (int) tileSizeSlider.getValue());
         final int          tileGap       = (int) tileGapSlider.getValue();
         final List<String> capturedTiles = new ArrayList<>(tilePaths);
         final int          estRows       = (int) Math.ceil((double) capturedTiles.size() / columns);
         final String       infoText      = columns + " × " + estRows
-                + " grid · " + capturedTiles.size() + " tiles";
+                + " grid · " + capturedTiles.size() + " tiles · " + tileSize + "px";
 
         progressLabel.setText("Generating…");
         progressLabel.setVisible(true);
@@ -250,7 +254,7 @@ public class MosaicController {
         generationThread = new Thread(() -> {
             try {
                 String resultPath = new MosaicGenerator()
-                        .generateMosaic(capturedTiles, columns, TILE_SIZE, tileGap);
+                        .generateMosaic(capturedTiles, columns, tileSize, tileGap);
 
                 if (Thread.interrupted()) return;
 
