@@ -114,6 +114,17 @@ public class VideoController {
 
     @FXML
     public void initialize() {
+        // Keep previewView constrained to the content area (canvas minus 24 px padding each side).
+        // Unconditional — ensures fit dimensions are always correct regardless of image state.
+        canvasArea.widthProperty().addListener((obs, ov, nv) -> {
+            double w = nv.doubleValue() - 48;
+            if (w > 0) previewView.setFitWidth(w);
+        });
+        canvasArea.heightProperty().addListener((obs, ov, nv) -> {
+            double h = nv.doubleValue() - 48;
+            if (h > 0) previewView.setFitHeight(h);
+        });
+
         durationSlider.valueProperty().addListener((obs, ov, nv) -> {
             durationValueLabel.setText(String.format("%.1f s", nv.doubleValue()));
             updateStripInfo();
@@ -251,6 +262,10 @@ public class VideoController {
                 Image img  = new Image(uri, 0, 0, true, true);
                 Platform.runLater(() -> {
                     previewView.setImage(img);
+                    double fw = canvasArea.getWidth() - 48;
+                    double fh = canvasArea.getHeight() - 48;
+                    if (fw > 0) previewView.setFitWidth(fw);
+                    if (fh > 0) previewView.setFitHeight(fh);
                     placeholderLabel.setVisible(false);
                     placeholderLabel.setManaged(false);
                 });
@@ -471,6 +486,10 @@ public class VideoController {
             previewIndex = (previewIndex + 1) % clipPaths.size();
             String uri = new File(clipPaths.get(previewIndex)).toURI().toString();
             previewView.setImage(new Image(uri, true));
+            double fw = canvasArea.getWidth() - 48;
+            double fh = canvasArea.getHeight() - 48;
+            if (fw > 0) previewView.setFitWidth(fw);
+            if (fh > 0) previewView.setFitHeight(fh);
             placeholderLabel.setVisible(false);
             placeholderLabel.setManaged(false);
             clipIndexLabel.setText(String.format("CLIP · #%02d", previewIndex + 1));
