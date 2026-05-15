@@ -96,7 +96,7 @@
                 <Label text="0" styleClass="nav-count"/>
             </HBox>
 
-            <HBox styleClass="nav-item" onMouseClicked="#handleNavVideo">
+            <HBox fx:id="navVideo" styleClass="nav-item" onMouseClicked="#handleNavVideo">
                 <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
                 <FontIcon iconLiteral="bi-camera-video" iconSize="16" styleClass="nav-icon-label"/>
                 <Label text="Video" styleClass="nav-label">
@@ -259,6 +259,11 @@
             <!-- ─── MOSAIC VIEW ───────────────────────────── -->
             <fx:include fx:id="mosaicView"
                         source="MosaicView.fxml"
+                        visible="false" managed="false"/>
+
+            <!-- ─── VIDEO VIEW ───────────────────────────── -->
+            <fx:include fx:id="videoView"
+                        source="VideoView.fxml"
                         visible="false" managed="false"/>
 
         </StackPane>
