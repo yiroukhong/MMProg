@@ -526,12 +526,17 @@ public class VideoController {
         saveDraftBtn.setVisible(true);
         saveDraftBtn.setManaged(true);
 
+        String transitionType = "NONE";
+        if (transFade.isSelected())       transitionType = "FADE";
+        else if (transCross.isSelected()) transitionType = "CROSS";
+
         List<String> paths = new ArrayList<>(clipPaths);
+        final String transition = transitionType;
 
         compileThread = new Thread(() -> {
             try {
                 String resultPath = new VideoCompiler()
-                        .compileVideo(paths, durationPerPhoto, overlayText, outputDir);
+                        .compileVideo(paths, durationPerPhoto, overlayText, outputDir, transition);
 
                 Platform.runLater(() -> {
                     lastVideoPath = resultPath;
