@@ -61,52 +61,7 @@
 
                 <VBox spacing="0">
 
-                    <!-- ── SECTION 1: TARGET IMAGE ── -->
-                    <VBox style="-fx-padding:16;
-                                 -fx-border-color:#ece4d3;
-                                 -fx-border-width:0 0 1 0;">
-
-                        <Label text="TARGET IMAGE"
-                               style="-fx-font-size:10;
-                                      -fx-font-weight:bold;
-                                      -fx-text-fill:#9C907D;"/>
-
-                        <HBox spacing="10" alignment="CENTER_LEFT"
-                              onMouseClicked="#handleSelectTarget"
-                              style="-fx-padding:8;
-                                     -fx-background-color:white;
-                                     -fx-border-color:#DDD2BC;
-                                     -fx-border-radius:8;
-                                     -fx-background-radius:8;
-                                     -fx-cursor:hand;">
-                            <VBox.margin><Insets top="10"/></VBox.margin>
-
-                            <StackPane minWidth="40" minHeight="40"
-                                       maxWidth="40" maxHeight="40"
-                                       style="-fx-background-color:#ECE4D3;
-                                              -fx-background-radius:6;">
-                                <ImageView fx:id="targetThumb"
-                                           fitWidth="40" fitHeight="40"
-                                           preserveRatio="true" smooth="true"/>
-                            </StackPane>
-
-                            <VBox spacing="3" HBox.hgrow="ALWAYS">
-                                <Label fx:id="targetFilename"
-                                       text="No image selected"
-                                       style="-fx-font-size:12;
-                                              -fx-font-weight:bold;
-                                              -fx-text-fill:#1F1B16;"/>
-                                <Label fx:id="targetReplaceLabel"
-                                       text="Replace"
-                                       onMouseClicked="#handleSelectTarget"
-                                       style="-fx-font-size:11;
-                                              -fx-text-fill:#C8623F;
-                                              -fx-cursor:hand;"/>
-                            </VBox>
-                        </HBox>
-                    </VBox>
-
-                    <!-- ── SECTION 2: TILE POOL ── -->
+                    <!-- ── SECTION 1: TILE POOL ── -->
                     <VBox style="-fx-padding:16;
                                  -fx-border-color:#ece4d3;
                                  -fx-border-width:0 0 1 0;">
@@ -165,24 +120,6 @@
                                     showTickMarks="false"
                                     blockIncrement="1"/>
                             <Label fx:id="columnsLabel" text="12"
-                                   style="-fx-font-size:11;
-                                          -fx-font-weight:bold;
-                                          -fx-text-fill:#C8623F;
-                                          -fx-min-width:28;"/>
-                        </HBox>
-
-                        <Label text="Rows"
-                               style="-fx-font-size:10;
-                                      -fx-font-weight:bold;
-                                      -fx-text-fill:#1F1B16;
-                                      -fx-padding:8 0 6 0;"/>
-                        <HBox spacing="8" alignment="CENTER_LEFT">
-                            <Slider fx:id="rowsSlider"
-                                    min="2" max="40" value="8"
-                                    HBox.hgrow="ALWAYS"
-                                    showTickMarks="false"
-                                    blockIncrement="1"/>
-                            <Label fx:id="rowsLabel" text="8"
                                    style="-fx-font-size:11;
                                           -fx-font-weight:bold;
                                           -fx-text-fill:#C8623F;

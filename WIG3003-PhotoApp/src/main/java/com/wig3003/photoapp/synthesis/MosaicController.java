@@ -53,13 +53,6 @@ public class MosaicController {
     @FXML private Label      gridInfoLabel;
 
     // =========================================================
-    // FXML — RIGHT PANEL: TARGET
-    // =========================================================
-
-    @FXML private ImageView targetThumb;
-    @FXML private Label     targetFilename;
-
-    // =========================================================
     // FXML — RIGHT PANEL: TILE POOL
     // =========================================================
 
@@ -73,8 +66,6 @@ public class MosaicController {
 
     @FXML private Slider columnsSlider;
     @FXML private Label  columnsLabel;
-    @FXML private Slider rowsSlider;
-    @FXML private Label  rowsLabel;
     @FXML private Slider tileGapSlider;
     @FXML private Label  tileGapLabel;
 
@@ -88,10 +79,11 @@ public class MosaicController {
     // STATE
     // =========================================================
 
-    private String       targetImagePath = null;
-    private List<String> tilePaths       = new ArrayList<>();
-    private List<String> libraryPaths    = new ArrayList<>();
-    private String       lastMosaicPath  = null;
+    private static final int TILE_SIZE = 80;
+
+    private List<String> tilePaths      = new ArrayList<>();
+    private List<String> libraryPaths   = new ArrayList<>();
+    private String       lastMosaicPath = null;
     private Thread       generationThread = null;
 
     /** Background executor for loading thumbnails — daemon so JVM exits cleanly. */
@@ -108,23 +100,17 @@ public class MosaicController {
 
     @FXML
     public void initialize() {
-        // Slider listeners
         columnsSlider.valueProperty().addListener((obs, ov, nv) ->
                 columnsLabel.setText(String.valueOf(nv.intValue())));
-
-        rowsSlider.valueProperty().addListener((obs, ov, nv) ->
-                rowsLabel.setText(String.valueOf(nv.intValue())));
 
         tileGapSlider.valueProperty().addListener((obs, ov, nv) ->
                 tileGapLabel.setText(nv.intValue() + " px"));
 
-        // Checkerboard canvas — bind size to the checker StackPane
         checkerCanvas.widthProperty().bind(mosaicCheckerPane.widthProperty());
         checkerCanvas.heightProperty().bind(mosaicCheckerPane.heightProperty());
         checkerCanvas.widthProperty().addListener( (o, ov, nv) -> drawChecker());
         checkerCanvas.heightProperty().addListener((o, ov, nv) -> drawChecker());
 
-        // Pre-populate tile pool from favourites
         loadTilePoolFromFavourites();
     }
 
@@ -204,37 +190,6 @@ public class MosaicController {
     }
 
     // =========================================================
-    // SELECT TARGET IMAGE
-    // =========================================================
-
-    @FXML
-    private void handleSelectTarget() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select target image");
-        chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.bmp"));
-
-        Stage stage = getStage();
-        if (stage == null) return;
-
-        File file = chooser.showOpenDialog(stage);
-        if (file == null) return;
-
-        targetImagePath = file.getAbsolutePath();
-        String filename = file.getName();
-        targetFilename.setText(filename);
-        mosaicTitle.setText("Mosaic - " + filename);
-        updateGridInfoLabel();
-
-        // Load thumbnail asynchronously
-        thumbnailExecutor.submit(() -> {
-            String uri = file.toURI().toString();
-            Image img = new Image(uri, 40, 40, true, true);
-            Platform.runLater(() -> targetThumb.setImage(img));
-        });
-    }
-
-    // =========================================================
     // CHANGE TILE SOURCE
     // =========================================================
 
@@ -273,22 +228,18 @@ public class MosaicController {
 
     @FXML
     private void handleGenerate() {
-        if (targetImagePath == null) {
-            showError("No target image selected.", "Please select a target image first.");
-            return;
-        }
         if (tilePaths.isEmpty()) {
             showError("No tile images.", "Add images to your Favorites or choose a tile source.");
             return;
         }
 
-        // Capture slider values on FX thread before going to background
-        final int    columns       = Math.max(1, (int) columnsSlider.getValue());
-        final int    rows          = Math.max(1, (int) rowsSlider.getValue());
-        final String capturedTarget = targetImagePath;
+        final int          columns       = Math.max(1, (int) columnsSlider.getValue());
+        final int          tileGap       = (int) tileGapSlider.getValue();
         final List<String> capturedTiles = new ArrayList<>(tilePaths);
+        final int          estRows       = (int) Math.ceil((double) capturedTiles.size() / columns);
+        final String       infoText      = columns + " × " + estRows
+                + " grid · " + capturedTiles.size() + " tiles";
 
-        // Update UI
         progressLabel.setText("Generating…");
         progressLabel.setVisible(true);
         progressLabel.setManaged(true);
@@ -298,30 +249,17 @@ public class MosaicController {
 
         generationThread = new Thread(() -> {
             try {
-                // Load target briefly to get its dimensions for tileSize
-                Mat target = ImageUtils.loadMatFromPath(capturedTarget);
-                int targetWidth = target.cols();
-                target.release();
-
-                int tileSize = Math.max(10, targetWidth / columns);
-
                 String resultPath = new MosaicGenerator()
-                        .generateMosaic(capturedTiles, capturedTarget, tileSize);
+                        .generateMosaic(capturedTiles, columns, TILE_SIZE, tileGap);
 
                 if (Thread.interrupted()) return;
 
-                // Load result image for display
-                Mat resultMat = ImageUtils.loadMatFromPath(resultPath);
-                WritableImage wi = ImageUtils.matToWritableImage(resultMat);
-                resultMat.release();
-
-                final String finalPath    = resultPath;
-                final int    totalTiles   = columns * rows;
-                final String targetName   = new File(capturedTarget).getName();
-                final String infoText     = columns + " × " + rows
-                        + " grid · " + totalTiles + " tiles · target " + targetName;
+                final Mat    resultMat = ImageUtils.loadMatFromPath(resultPath);
+                final String finalPath = resultPath;
 
                 Platform.runLater(() -> {
+                    WritableImage wi = ImageUtils.matToWritableImage(resultMat);
+                    resultMat.release();
                     lastMosaicPath = finalPath;
                     mosaicView.setImage(wi);
                     placeholderLabel.setVisible(false);
@@ -427,15 +365,6 @@ public class MosaicController {
     // =========================================================
     // HELPERS
     // =========================================================
-
-    private void updateGridInfoLabel() {
-        if (targetImagePath != null) {
-            String name = new File(targetImagePath).getName();
-            int cols = (int) columnsSlider.getValue();
-            int rows = (int) rowsSlider.getValue();
-            gridInfoLabel.setText(cols + " × " + rows + " grid · target " + name);
-        }
-    }
 
     private boolean isImageFile(String name) {
         String lower = name.toLowerCase();
