@@ -296,6 +296,7 @@ public class MainController implements Initializable {
         mosaicView.setManaged(false);
         videoView.setVisible(true);
         videoView.setManaged(true);
+        videoViewController.setLibraryPaths(new ArrayList<>(allPaths));
         setNavActive(navVideo);
     }
     @FXML private void handleNavShare()  { /* wired by Social module */ }

@@ -8,12 +8,19 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.TilePane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -24,8 +31,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class VideoController {
@@ -91,6 +100,7 @@ public class VideoController {
     // =========================================================
 
     private List<String>             clipPaths         = new ArrayList<>();
+    private List<String>             libraryPaths      = new ArrayList<>();
     private int                      selectedClipIndex = -1;
     private String                   lastVideoPath     = null;
     private Thread                   compileThread     = null;
@@ -257,41 +267,165 @@ public class VideoController {
     // =========================================================
 
     private void handleAddFromFavorites() {
-        List<String> favourites;
-        try {
-            favourites = FavouritesManager.getFavourites();
-        } catch (IOException e) {
-            showError("Could not load Favorites.", e.getMessage());
-            return;
+        Stage owner = getStage();
+        if (owner == null) return;
+
+        // Use full library if available, otherwise fall back to Favorites
+        List<String> source;
+        if (!libraryPaths.isEmpty()) {
+            source = libraryPaths;
+        } else {
+            try {
+                source = FavouritesManager.getFavourites();
+            } catch (IOException e) {
+                showError("Could not load library.", e.getMessage());
+                return;
+            }
         }
 
-        List<String> available = favourites.stream()
+        List<String> available = source.stream()
                 .filter(p -> !clipPaths.contains(p))
                 .collect(Collectors.toList());
 
         if (available.isEmpty()) {
-            showInfo("No new photos.", "All Favorites are already in the strip.");
+            showInfo("No photos available.", "All library photos are already in the strip.");
             return;
         }
 
-        List<String> names = available.stream()
-                .map(p -> new File(p).getName())
-                .collect(Collectors.toList());
+        Set<String> selectedPaths = new HashSet<>();
 
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(names.get(0), names);
-        dialog.setTitle("Add from Favorites");
-        dialog.setHeaderText("Choose a photo to add:");
-        dialog.setContentText("Photo:");
+        // ── Thumbnail grid ────────────────────────────────────────────
+        TilePane tilePane = new TilePane();
+        tilePane.setHgap(10);
+        tilePane.setVgap(10);
+        tilePane.setPrefColumns(5);
+        tilePane.setPadding(new Insets(16));
+        tilePane.setStyle("-fx-background-color:#FBF8F3;");
 
-        dialog.showAndWait().ifPresent(chosen -> {
-            int idx = names.indexOf(chosen);
-            if (idx >= 0) {
-                clipPaths.add(available.get(idx));
+        for (String path : available) {
+            final String BASE = "-fx-background-color:#ECE4D3;-fx-background-radius:8;-fx-cursor:hand;";
+            final String SEL  = "-fx-background-color:#ECE4D3;-fx-background-radius:8;-fx-cursor:hand;"
+                    + "-fx-border-color:#B0432B;-fx-border-width:2.5;-fx-border-radius:8;";
+
+            StackPane card = new StackPane();
+            card.setMinSize(140, 100);
+            card.setMaxSize(140, 100);
+            card.setPrefSize(140, 100);
+            card.setStyle(BASE);
+
+            // Thumbnail loaded in background
+            Thread t = new Thread(() -> {
+                String uri = new File(path).toURI().toString();
+                Image img = new Image(uri, 140, 100, false, true);
+                Platform.runLater(() -> {
+                    ImageView iv = new ImageView(img);
+                    iv.setFitWidth(140);
+                    iv.setFitHeight(100);
+                    iv.setPreserveRatio(false);
+                    iv.setSmooth(true);
+                    card.getChildren().add(0, iv);
+                });
+            });
+            t.setDaemon(true);
+            t.start();
+
+            // Checkmark badge (hidden until selected)
+            Label check = new Label("✓");
+            check.setStyle("-fx-background-color:#B0432B;-fx-text-fill:white;"
+                    + "-fx-background-radius:999;-fx-font-size:11;-fx-font-weight:bold;"
+                    + "-fx-min-width:20;-fx-min-height:20;-fx-max-width:20;-fx-max-height:20;"
+                    + "-fx-alignment:center;");
+            StackPane.setAlignment(check, Pos.TOP_RIGHT);
+            StackPane.setMargin(check, new Insets(6, 6, 0, 0));
+            check.setVisible(false);
+            card.getChildren().add(check);
+
+            card.setOnMouseClicked(e -> {
+                if (selectedPaths.contains(path)) {
+                    selectedPaths.remove(path);
+                    card.setStyle(BASE);
+                    check.setVisible(false);
+                } else {
+                    selectedPaths.add(path);
+                    card.setStyle(SEL);
+                    check.setVisible(true);
+                }
+            });
+
+            tilePane.getChildren().add(card);
+        }
+
+        ScrollPane scrollPane = new ScrollPane(tilePane);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color:#FBF8F3;-fx-background:#FBF8F3;"
+                + "-fx-border-color:transparent;-fx-focus-color:transparent;"
+                + "-fx-faint-focus-color:transparent;");
+
+        // ── Header ───────────────────────────────────────────────────
+        Label titleLbl = new Label("Choose Photos");
+        titleLbl.setStyle("-fx-font-size:20;-fx-font-family:'Georgia',serif;-fx-text-fill:#1F1B16;");
+        Label subtitleLbl = new Label("Click to select · " + available.size() + " available");
+        subtitleLbl.setStyle("-fx-font-size:12;-fx-text-fill:#6B6051;");
+        VBox header = new VBox(4, titleLbl, subtitleLbl);
+        header.setPadding(new Insets(16, 20, 14, 20));
+        header.setStyle("-fx-background-color:#FBF8F3;"
+                + "-fx-border-color:#ECE4D3;-fx-border-width:0 0 1 0;");
+
+        // ── Footer ───────────────────────────────────────────────────
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setStyle("-fx-background-color:white;-fx-text-fill:#1F1B16;"
+                + "-fx-border-color:#DDD2BC;-fx-border-radius:8;-fx-background-radius:8;"
+                + "-fx-padding:8 16;-fx-cursor:hand;-fx-font-size:13;");
+
+        Button addBtn = new Button("Add Selected");
+        addBtn.setStyle("-fx-background-color:#1F1B16;-fx-text-fill:white;"
+                + "-fx-background-radius:8;-fx-padding:8 16;-fx-cursor:hand;-fx-font-size:13;");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox footer = new HBox(8, spacer, cancelBtn, addBtn);
+        footer.setPadding(new Insets(12, 20, 14, 20));
+        footer.setAlignment(Pos.CENTER_RIGHT);
+        footer.setStyle("-fx-background-color:#FBF8F3;"
+                + "-fx-border-color:#ECE4D3;-fx-border-width:1 0 0 0;");
+
+        // ── Root layout ───────────────────────────────────────────────
+        BorderPane root = new BorderPane();
+        root.setTop(header);
+        root.setCenter(scrollPane);
+        root.setBottom(footer);
+        root.setStyle("-fx-background-color:#FBF8F3;");
+
+        // ── Dialog stage — slightly smaller than main window ──────────
+        Stage dialog = new Stage();
+        dialog.setTitle("Add Images — Vi-Flow");
+        dialog.initModality(Modality.WINDOW_MODAL);
+        dialog.initOwner(owner);
+        dialog.setWidth(owner.getWidth() - 120);
+        dialog.setHeight(owner.getHeight() - 80);
+        dialog.setX(owner.getX() + 60);
+        dialog.setY(owner.getY() + 40);
+
+        cancelBtn.setOnAction(e -> dialog.close());
+
+        addBtn.setOnAction(e -> {
+            if (!selectedPaths.isEmpty()) {
+                // Preserve the order from the available list
+                for (String p : available) {
+                    if (selectedPaths.contains(p)) {
+                        clipPaths.add(p);
+                    }
+                }
                 rebuildFilmstrip();
                 updateStripInfo();
                 handleClipSelected(clipPaths.size() - 1);
             }
+            dialog.close();
         });
+
+        dialog.setScene(new Scene(root));
+        dialog.show();
     }
 
     // =========================================================
@@ -449,6 +583,10 @@ public class VideoController {
     // =========================================================
     // PUBLIC API
     // =========================================================
+
+    public void setLibraryPaths(List<String> paths) {
+        libraryPaths = paths != null ? new ArrayList<>(paths) : new ArrayList<>();
+    }
 
     public void setClipPaths(List<String> paths) {
         clipPaths = paths != null ? new ArrayList<>(paths) : new ArrayList<>();
