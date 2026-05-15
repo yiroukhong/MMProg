@@ -44,6 +44,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 // CW: change end
 
+import com.wig3003.photoapp.synthesis.MosaicController;
+
 
 public class MainController implements Initializable {
 
@@ -104,6 +106,11 @@ public class MainController implements Initializable {
     // CW: cached DipEdit module - load once, reuse on tab switch
     private Parent            dipEditRoot;
     private DipEditController dipEditController;
+
+    // Mosaic view — injected via fx:include in main.fxml
+    @FXML private Parent           mosaicView;
+    @FXML private MosaicController mosaicViewController;
+    @FXML private HBox             navMosaic;
     // cached BorderPane root - stored once scene is available
     // Safe to use anytime unlike libraryView.getScene() which returns
     // null when libraryView is swapped out of the BorderPane center
@@ -249,12 +256,27 @@ public class MainController implements Initializable {
     
 // =========Chyntia: Edit end
 
-    @FXML private void handleNavMosaic() { /* wired by Multimedia module */ }
+    @FXML
+    private void handleNavMosaic() {
+        // If DipEdit replaced the center, restore the StackPane first
+        if (mainRoot != null && dipEditRoot != null
+                && mainRoot.getCenter() == dipEditRoot) {
+            restoreLibraryCenter();
+        }
+        libraryView.setVisible(false);
+        libraryView.setManaged(false);
+        detailView.setVisible(false);
+        detailView.setManaged(false);
+        mosaicView.setVisible(true);
+        mosaicView.setManaged(true);
+        mosaicViewController.setLibraryPaths(new ArrayList<>(allPaths));
+        setNavActive(navMosaic);
+    }
     @FXML private void handleNavVideo()  { /* wired by Multimedia module */ }
     @FXML private void handleNavShare()  { /* wired by Social module */ }
 
     private void setNavActive(HBox active) {
-        for (HBox item : List.of(navLibrary, navFavorites, navAnnotated)) {
+        for (HBox item : List.of(navLibrary, navFavorites, navAnnotated, navMosaic)) {
             item.getStyleClass().remove("nav-active");
         }
         active.getStyleClass().add("nav-active");
@@ -565,6 +587,8 @@ public class MainController implements Initializable {
     private void showDetailView() {
         libraryView.setVisible(false);
         libraryView.setManaged(false);
+        mosaicView.setVisible(false);
+        mosaicView.setManaged(false);
         detailView.setVisible(true);
         detailView.setManaged(true);
     }
@@ -573,6 +597,8 @@ public class MainController implements Initializable {
     private void showLibraryView() {
         detailView.setVisible(false);
         detailView.setManaged(false);
+        mosaicView.setVisible(false);
+        mosaicView.setManaged(false);
         libraryView.setVisible(true);
         libraryView.setManaged(true);
  
