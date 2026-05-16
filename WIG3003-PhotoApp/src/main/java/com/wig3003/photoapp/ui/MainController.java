@@ -82,8 +82,19 @@ public class MainController implements Initializable {
     @FXML private Button heartButton;
     @FXML private StackPane detailImageArea;
     @FXML private ImageView detailImageView;
-    @FXML private TextArea annotationField;
+    @FXML private javafx.scene.canvas.Canvas annotationCanvas;
+    @FXML private javafx.scene.control.TextField annotationTextField;
+    @FXML private javafx.scene.control.Slider fontSizeSlider;
+    @FXML private Label fontSizeLabel;
+    @FXML private javafx.scene.control.ColorPicker fontColorPicker;
     @FXML private Label annotationFeedbackLabel;
+
+    private Image originalImage;
+    private String userText = "";
+    private double textX = -1;
+    private double textY = -1;
+    private boolean isDraggingText = false;
+    private String previousFilter = "ALL";
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -132,18 +143,50 @@ public class MainController implements Initializable {
     // null when libraryView is swapped out of the BorderPane center
     private BorderPane mainRoot;
     // CW: change end
+    private void setupAnnotationDrag() {
+        annotationCanvas.setOnMousePressed(e -> {
+            if (userText == null || userText.isBlank()) return;
+            double dist = Math.hypot(e.getX() - textX, e.getY() - textY);
+            if (dist < 80) isDraggingText = true;
+        });
 
+        annotationCanvas.setOnMouseDragged(e -> {
+            if (!isDraggingText) return;
+            textX = e.getX();
+            textY = e.getY();
+            redrawCanvas();
+        });
+
+        annotationCanvas.setOnMouseReleased(e -> isDraggingText = false);
+    }
     // ── Initialise ────────────────────────────────────────────────────────────
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Bind tile width to the scroll pane's width so tiles stay 5-per-row
-        gridScrollPane.widthProperty().addListener((obs, old, w) -> {
-            double available = w.doubleValue() - 32; // 16px padding each side
-            thumbSize = Math.max(100, (available - 4 * 8) / 5); // 4 gaps of 8px
+
+        // Bind tile width to scroll pane width so tiles stay 5-per-row
+        gridScrollPane.widthProperty().addListener((gridObs, gridOld, gridW) -> {
+            double available = gridW.doubleValue() - 32;
+            thumbSize = Math.max(100, (available - 4 * 8) / 5);
             photoGrid.setPrefTileWidth(thumbSize);
             photoGrid.setPrefTileHeight(thumbSize);
         });
+
+        // One-time layout listener to size the canvas
+        detailImageArea.layoutBoundsProperty().addListener(
+            new javafx.beans.value.ChangeListener<javafx.geometry.Bounds>() {
+                @Override
+                public void changed(
+                        javafx.beans.value.ObservableValue<? extends javafx.geometry.Bounds> boundsObs,
+                        javafx.geometry.Bounds oldBounds,
+                        javafx.geometry.Bounds newBounds) {
+                    if (newBounds.getWidth() > 0 && newBounds.getHeight() > 0) {
+                        annotationCanvas.setWidth(newBounds.getWidth());
+                        annotationCanvas.setHeight(newBounds.getHeight());
+                        boundsObs.removeListener(this);
+                    }
+                }
+            });
 
         // Bind detail ImageView size to its container
         detailImageView.fitWidthProperty().bind(
@@ -151,23 +194,41 @@ public class MainController implements Initializable {
         detailImageView.fitHeightProperty().bind(
                 detailImageArea.heightProperty().subtract(48));
 
-        // CW: cache the BorderPane root once the scene is attached
-            // so navigateToDipEdit and showLibraryView can always access it
-            // even when libraryView is removed from the scene center
-        libraryView.sceneProperty().addListener((obs, oldScene, newScene) -> {
+        // Cache the BorderPane root once the scene is attached
+        libraryView.sceneProperty().addListener((sceneObs, oldScene, newScene) -> {
             if (newScene != null && mainRoot == null) {
                 mainRoot = (BorderPane) newScene.getRoot();
             }
         });
-        // CW: change end
 
-        // CW: load saved Vi-Flow library images on startup
+        // Load saved library images on startup
         loadAppLibrary();
-        // CW: change end
 
         shareViewController.setMainController(this);
-    }
 
+        // Set default color picker value
+        fontColorPicker.setValue(javafx.scene.paint.Color.WHITE);
+
+        // Live font size label update
+        fontSizeSlider.valueProperty().addListener((sliderObs, sliderOld, sliderNew) -> {
+            fontSizeLabel.setText((int) sliderNew.doubleValue() + " pt");
+            if (userText != null && !userText.isBlank()) redrawCanvas();
+        });
+
+        // Live preview — text appears on image as you type
+        annotationTextField.textProperty().addListener((txtObs, txtOld, txtNew) -> {
+            userText = txtNew;
+            redrawCanvas();
+        });
+
+        // Live preview — color change updates image immediately
+        fontColorPicker.valueProperty().addListener((colorObs, colorOld, colorNew) -> {
+            if (userText != null && !userText.isBlank()) redrawCanvas();
+        });
+
+        // Setup drag on canvas
+        setupAnnotationDrag();
+    }
     // ── Navigation ────────────────────────────────────────────────────────────
 
     @FXML
@@ -544,7 +605,44 @@ public class MainController implements Initializable {
         StackPane.setMargin(badge, new Insets(0, 8, 8, 0));
         return badge;
     }
+   @FXML
+    private void handleSaveAndBack() {
+        if (currentPath == null) return;
 
+        userText = annotationTextField.getText();
+
+        try {
+            if (userText == null || userText.isBlank()) {
+                MetadataStore.getInstance().deleteAnnotation(currentPath);
+            } else {
+                String toSave = userText + "||" + textX + "||" + textY;
+                MetadataStore.getInstance().saveAnnotation(currentPath, toSave);
+            }
+            updateCounts();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // restore the filter we came from
+        activeFilter = previousFilter;
+        switch (previousFilter) {
+            case "ANNOTATED":
+                filterAnnotated.setSelected(true);
+                setNavActive(navAnnotated);
+                break;
+            case "FAVOURITES":
+                filterFavorites.setSelected(true);
+                setNavActive(navFavorites);
+                break;
+            default:
+                filterAll.setSelected(true);
+                setNavActive(navLibrary);
+                break;
+        }
+
+        applyFilter();
+        Platform.runLater(() -> showLibraryView());
+    }
     // ── Selection ─────────────────────────────────────────────────────────────
 
     private void selectImage(int index) {
@@ -604,6 +702,7 @@ public class MainController implements Initializable {
 
     private void openDetail(int index) {
         if (index < 0 || index >= displayPaths.size()) return;
+        previousFilter = activeFilter; // remember where we came from
         selectedIndex = index;
         currentPath = displayPaths.get(index);
         loadDetailImage(currentPath);
@@ -623,10 +722,13 @@ public class MainController implements Initializable {
             if (prog.doubleValue() >= 1.0 && !img.isError()) {
                 Platform.runLater(() -> {
                     detailImageView.setImage(img);
+                    originalImage = img;
                     int w = (int) img.getWidth();
                     int h = (int) img.getHeight();
-                    detailDimensions.setText(
-                            String.format("%,d × %,d", w, h));
+                    detailDimensions.setText(String.format("%,d × %,d", w, h));
+                    annotationCanvas.setWidth(detailImageArea.getWidth());
+                    annotationCanvas.setHeight(detailImageArea.getHeight());
+                    redrawCanvas();
                 });
             }
         });
@@ -706,69 +808,100 @@ public class MainController implements Initializable {
     // ── Annotation ────────────────────────────────────────────────────────────
 
     private void loadAnnotationForImage(String path) {
-        String text = MetadataStore.getInstance().getAnnotation(path);
-        annotationField.setText(text != null ? text : "");
+        String saved = MetadataStore.getInstance().getAnnotation(path);
+        if (saved != null && saved.contains("||")) {
+            // parse "text||x||y"
+            String[] parts = saved.split("\\|\\|");
+            userText = parts[0];
+            textX = parts.length > 1 ? Double.parseDouble(parts[1]) : -1;
+            textY = parts.length > 2 ? Double.parseDouble(parts[2]) : -1;
+        } else {
+            userText = saved != null ? saved : "";
+            textX = -1;
+            textY = -1;
+        }
+        annotationTextField.setText(userText);
     }
-
     @FXML
-    private void handleSaveAnnotation() {
+    private void handleApplyAnnotation() {
         if (currentPath == null) return;
+        userText = annotationTextField.getText();
+        if (userText == null || userText.isBlank()) return;
+
+        redrawCanvas();
+
         try {
-            MetadataStore.getInstance().saveAnnotation(currentPath, annotationField.getText());
-            annotationFeedbackLabel.setText("✓ Annotated!");
+            String toSave = userText + "||" + textX + "||" + textY;
+            MetadataStore.getInstance().saveAnnotation(currentPath, toSave);
+            annotationFeedbackLabel.setText("✓ Applied!");
             annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #4A6741; -fx-font-style: italic;");
+                "-fx-font-size: 12px; -fx-text-fill: #4A6741; -fx-font-style: italic;");
             PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
-            pause.setOnFinished(e -> {
-                annotationFeedbackLabel.setText("");
-                annotationFeedbackLabel.setStyle(
-                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
-            });
+            pause.setOnFinished(e -> annotationFeedbackLabel.setText(""));
             pause.play();
             updateCounts();
             refreshGrid();
-            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
-                selectImage(selectedIndex);
-            }
         } catch (Exception e) {
             annotationFeedbackLabel.setText("✗ Failed to save");
-            annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
         }
     }
 
     @FXML
-    private void handleDeleteAnnotation() {
+    private void handleClearText() {
         if (currentPath == null) return;
+        userText = "";
+        textX = -1;
+        textY = -1;
+        annotationTextField.clear();
+        redrawCanvas();
+
         try {
             MetadataStore.getInstance().deleteAnnotation(currentPath);
-            annotationField.clear();
-            annotationFeedbackLabel.setText("Annotation removed");
+            annotationFeedbackLabel.setText("Annotation cleared.");
             annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #9C907D; -fx-font-style: italic;");
+                "-fx-font-size: 12px; -fx-text-fill: #9C907D; -fx-font-style: italic;");
             PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
-            pause.setOnFinished(e -> {
-                annotationFeedbackLabel.setText("");
-                annotationFeedbackLabel.setStyle(
-                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
-            });
+            pause.setOnFinished(e -> annotationFeedbackLabel.setText(""));
             pause.play();
             updateCounts();
             refreshGrid();
-            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
-                selectImage(selectedIndex);
-            }
         } catch (Exception e) {
-            annotationFeedbackLabel.setText("✗ Failed to save");
-            annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
+            annotationFeedbackLabel.setText("✗ Failed to clear");
         }
     }
+    private void redrawCanvas() {
+        if (annotationCanvas == null) return;
+        if (annotationCanvas.getWidth() == 0 || annotationCanvas.getHeight() == 0) return;
 
+        javafx.scene.canvas.GraphicsContext gc = annotationCanvas.getGraphicsContext2D();
+        gc.clearRect(0, 0, annotationCanvas.getWidth(), annotationCanvas.getHeight());
+
+        if (originalImage != null) {
+            gc.drawImage(originalImage, 0, 0,
+                    annotationCanvas.getWidth(), annotationCanvas.getHeight());
+        }
+
+        if (userText != null && !userText.isBlank()) {
+            int fontSize = (int) fontSizeSlider.getValue();
+            javafx.scene.paint.Color color = fontColorPicker.getValue();
+
+            gc.setFont(javafx.scene.text.Font.font("Serif", fontSize));
+            gc.setFill(color);
+
+            // use saved drag position, or default bottom-center
+            if (textX < 0 || textY < 0) {
+                textX = (annotationCanvas.getWidth() / 2)
+                        - (userText.length() * fontSize * 0.3);
+                textY = annotationCanvas.getHeight() - 20;
+            }
+
+            gc.fillText(userText, textX, textY);
+        }
+    }
     // ── Stub handlers (wired by other modules) ────────────────────────────────
 
     @FXML private void handleNewMosaic() { /* Multimedia module */ }
-    @FXML private void handleAnnotate()  { annotationField.requestFocus(); }
+    @FXML private void handleAnnotate()  { annotationTextField.requestFocus(); }
     @FXML
     private void handleShare() {
         handleNavShare();
