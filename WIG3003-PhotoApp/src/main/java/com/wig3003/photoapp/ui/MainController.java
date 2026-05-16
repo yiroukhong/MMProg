@@ -94,6 +94,7 @@ public class MainController implements Initializable {
     private double textX = -1;
     private double textY = -1;
     private boolean isDraggingText = false;
+    private String previousFilter = "ALL";
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -604,7 +605,7 @@ public class MainController implements Initializable {
         StackPane.setMargin(badge, new Insets(0, 8, 8, 0));
         return badge;
     }
-    @FXML
+   @FXML
     private void handleSaveAndBack() {
         if (currentPath == null) return;
 
@@ -614,18 +615,33 @@ public class MainController implements Initializable {
             if (userText == null || userText.isBlank()) {
                 MetadataStore.getInstance().deleteAnnotation(currentPath);
             } else {
-                // save text + position as "text||x||y"
                 String toSave = userText + "||" + textX + "||" + textY;
                 MetadataStore.getInstance().saveAnnotation(currentPath, toSave);
             }
             updateCounts();
-            refreshGrid();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        showLibraryView();
-        setNavActive(navLibrary);
+        // restore the filter we came from
+        activeFilter = previousFilter;
+        switch (previousFilter) {
+            case "ANNOTATED":
+                filterAnnotated.setSelected(true);
+                setNavActive(navAnnotated);
+                break;
+            case "FAVOURITES":
+                filterFavorites.setSelected(true);
+                setNavActive(navFavorites);
+                break;
+            default:
+                filterAll.setSelected(true);
+                setNavActive(navLibrary);
+                break;
+        }
+
+        applyFilter();
+        Platform.runLater(() -> showLibraryView());
     }
     // ── Selection ─────────────────────────────────────────────────────────────
 
@@ -686,6 +702,7 @@ public class MainController implements Initializable {
 
     private void openDetail(int index) {
         if (index < 0 || index >= displayPaths.size()) return;
+        previousFilter = activeFilter; // remember where we came from
         selectedIndex = index;
         currentPath = displayPaths.get(index);
         loadDetailImage(currentPath);

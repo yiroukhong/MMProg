@@ -289,7 +289,7 @@
                     <Button text="Clear text" styleClass="btn-secondary"
                             onAction="#handleClearText" prefWidth="100"/>
                     <Button text="Save" styleClass="btn-primary"
-                            onAction="#handleApplyAnnotation" prefWidth="100"/>
+                            onAction="#handleSaveAndBack" prefWidth="100"/>
                 </HBox>
                 </VBox>
 
