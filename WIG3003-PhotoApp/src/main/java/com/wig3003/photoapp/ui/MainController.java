@@ -44,6 +44,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 // CW: change end
 
+import com.wig3003.photoapp.social.ShareController;
 import com.wig3003.photoapp.synthesis.MosaicController;
 import com.wig3003.photoapp.synthesis.VideoController;
 
@@ -117,6 +118,12 @@ public class MainController implements Initializable {
     @FXML private Parent          videoView;
     @FXML private VideoController videoViewController;
     @FXML private HBox            navVideo;
+
+    // Share view — injected via fx:include in main.fxml
+    @FXML private Parent          shareView;
+    @FXML private ShareController shareViewController;
+    @FXML private HBox            navShare;
+
     // cached BorderPane root - stored once scene is available
     // Safe to use anytime unlike libraryView.getScene() which returns
     // null when libraryView is swapped out of the BorderPane center
@@ -155,7 +162,7 @@ public class MainController implements Initializable {
         loadAppLibrary();
         // CW: change end
 
-
+        shareViewController.setMainController(this);
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
@@ -275,6 +282,8 @@ public class MainController implements Initializable {
         detailView.setManaged(false);
         videoView.setVisible(false);
         videoView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
         mosaicView.setVisible(true);
         mosaicView.setManaged(true);
         mosaicViewController.setLibraryPaths(new ArrayList<>(allPaths));
@@ -294,15 +303,34 @@ public class MainController implements Initializable {
         detailView.setManaged(false);
         mosaicView.setVisible(false);
         mosaicView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
         videoView.setVisible(true);
         videoView.setManaged(true);
         videoViewController.setLibraryPaths(new ArrayList<>(allPaths));
         setNavActive(navVideo);
     }
-    @FXML private void handleNavShare()  { /* wired by Social module */ }
+    @FXML
+    public void handleNavShare() {
+        if (mainRoot != null && dipEditRoot != null
+                && mainRoot.getCenter() == dipEditRoot) {
+            restoreLibraryCenter();
+        }
+        libraryView.setVisible(false);
+        libraryView.setManaged(false);
+        detailView.setVisible(false);
+        detailView.setManaged(false);
+        mosaicView.setVisible(false);
+        mosaicView.setManaged(false);
+        videoView.setVisible(false);
+        videoView.setManaged(false);
+        shareView.setVisible(true);
+        shareView.setManaged(true);
+        setNavActive(navShare);
+    }
 
     private void setNavActive(HBox active) {
-        for (HBox item : List.of(navLibrary, navFavorites, navAnnotated, navMosaic, navVideo)) {
+        for (HBox item : List.of(navLibrary, navFavorites, navAnnotated, navMosaic, navVideo, navShare)) {
             item.getStyleClass().remove("nav-active");
         }
         active.getStyleClass().add("nav-active");
@@ -617,6 +645,8 @@ public class MainController implements Initializable {
         mosaicView.setManaged(false);
         videoView.setVisible(false);
         videoView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
         detailView.setVisible(true);
         detailView.setManaged(true);
     }
@@ -629,6 +659,8 @@ public class MainController implements Initializable {
         mosaicView.setManaged(false);
         videoView.setVisible(false);
         videoView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
         libraryView.setVisible(true);
         libraryView.setManaged(true);
  
@@ -703,7 +735,13 @@ public class MainController implements Initializable {
 
     @FXML private void handleNewMosaic() { /* Multimedia module */ }
     @FXML private void handleAnnotate()  { annotationField.requestFocus(); }
-    @FXML private void handleShare()     { /* Social module */ }
+    @FXML
+    private void handleShare() {
+        handleNavShare();
+        if (currentPath != null) {
+            shareViewController.prefillAttachment(currentPath);
+        }
+    }
     @FXML private void handleSearch()    { /* search logic */ }
 
     // ── Keyboard navigation ───────────────────────────────────────────────────

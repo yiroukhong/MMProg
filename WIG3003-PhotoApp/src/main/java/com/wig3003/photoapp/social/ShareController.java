@@ -74,8 +74,9 @@ public class ShareController {
         attachedFiles.add(file);
         attachmentListBox.getChildren().add(buildAttachmentRow(file));
         updateAttachmentHeader();
-        // navigation is triggered by the caller before this method is invoked;
-        // mainController.handleNavShare() is called here after Step 4 makes it public
+        if (mainController != null) {
+            mainController.handleNavShare();
+        }
     }
 
     // ── Initialise ────────────────────────────────────────────────────────────
