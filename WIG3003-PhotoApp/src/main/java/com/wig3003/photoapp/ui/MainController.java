@@ -12,9 +12,11 @@ import java.util.Set;
 import com.wig3003.photoapp.model.MetadataStore;
 import com.wig3003.photoapp.util.ImageUtils;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.util.Duration;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -81,6 +83,7 @@ public class MainController implements Initializable {
     @FXML private StackPane detailImageArea;
     @FXML private ImageView detailImageView;
     @FXML private TextArea annotationField;
+    @FXML private Label annotationFeedbackLabel;
 
     // ── State ─────────────────────────────────────────────────────────────────
 
