@@ -247,7 +247,9 @@
                               styleClass="annotation-field"
                               promptText="Add a note to this image…"
                               wrapText="true"
-                              prefHeight="120"/>
+                              prefHeight="100">
+                        <VBox.vgrow>NEVER</VBox.vgrow>
+                    </TextArea>
                     <HBox alignment="CENTER_RIGHT" spacing="10">
                         <padding><Insets top="4"/></padding>
                         <Label fx:id="annotationFeedbackLabel" text=""
