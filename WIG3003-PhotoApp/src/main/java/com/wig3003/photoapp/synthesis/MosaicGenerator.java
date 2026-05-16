@@ -13,89 +13,66 @@ import java.util.List;
 
 /**
  * Winnie — Multimedia Synthesis
- * Implementation of the Mosaic Generator as per Contract §6[cite: 3, 7].
+ * Lays every tile image in a grid. No target image; every supplied photo
+ * appears exactly once.
  */
 public class MosaicGenerator {
 
     /**
-     * Generates a mosaic from a target image and a pool of tiles[cite: 8].
+     * Generates a mosaic that contains every image in {@code tilePaths}.
+     *
+     * @param tilePaths  paths to the tile images (all will be used)
+     * @param columns    number of columns in the grid (≥ 1)
+     * @param tileSize   pixel width and height of each cell (≥ 10)
+     * @param tileGap    gap in pixels between cells (≥ 0)
+     * @return           absolute path to the saved PNG
      */
-    public String generateMosaic(List<String> tilePaths, String targetPath, int tileSize) throws IOException {
-        // 1. Requirement check: Validate inputs 
+    public String generateMosaic(List<String> tilePaths,
+                                 int columns,
+                                 int tileSize,
+                                 int tileGap) throws IOException {
         if (tilePaths == null || tilePaths.isEmpty()) {
             throw new IllegalArgumentException("tilePaths must not be empty");
         }
-        if (tileSize < 10) {
-            throw new IllegalArgumentException("tileSize must be >= 10");
-        }
+        columns  = Math.max(1, columns);
+        tileSize = Math.max(10, tileSize);
+        tileGap  = Math.max(0, tileGap);
 
-        // 2. Load target image via ImageUtils [cite: 8, 80]
-        Mat target = ImageUtils.loadMatFromPath(targetPath);
-        
-        // 3. Compute grid dimensions [cite: 8]
-        int cols = target.cols() / tileSize;
-        int rows = target.rows() / tileSize;
+        int n    = tilePaths.size();
+        int rows = (int) Math.ceil((double) n / columns);
 
-        // 4. Load and resize all tile images to tileSize x tileSize [cite: 8]
-        List<Mat> tiles = new ArrayList<>();
+        int stride   = tileSize + tileGap;
+        int canvasW  = columns * tileSize + Math.max(0, columns - 1) * tileGap;
+        int canvasH  = rows    * tileSize + Math.max(0, rows    - 1) * tileGap;
+
+        // Load and resize all tile images
+        List<Mat> tiles = new ArrayList<>(n);
         for (String p : tilePaths) {
-            Mat t = ImageUtils.loadMatFromPath(p);
+            Mat raw     = ImageUtils.loadMatFromPath(p);
             Mat resized = new Mat();
-            Imgproc.resize(t, resized, new Size(tileSize, tileSize));
+            Imgproc.resize(raw, resized, new Size(tileSize, tileSize));
+            raw.release();
             tiles.add(resized);
         }
 
-        // 5. Build mosaic Mat [cite: 8]
-        Mat mosaic = Mat.zeros(rows * tileSize, cols * tileSize, CvType.CV_8UC3);
+        // Dark background (#1F1B16 → BGR 22, 27, 31)
+        Mat mosaic = new Mat(canvasH, canvasW, CvType.CV_8UC3, new Scalar(22, 27, 31));
 
-        // 6. Build the grid and copy tiles [cite: 17, 18, 28]
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                Rect roi = new Rect(c * tileSize, r * tileSize, tileSize, tileSize);
-                Mat region = target.submat(roi);
-                
-                // Use helper to find the best-matching tile [cite: 26]
-                Mat tile = bestMatchingTile(region, tiles);
-                
-                // Copy tile into the correct submat ROI [cite: 28]
-                tile.copyTo(mosaic.submat(roi));
-            }
+        for (int i = 0; i < tiles.size(); i++) {
+            int c = i % columns;
+            int r = i / columns;
+            int x = c * stride;
+            int y = r * stride;
+            tiles.get(i).copyTo(mosaic.submat(new Rect(x, y, tileSize, tileSize)));
         }
 
-        // 7. Save mosaic to data/output/ [cite: 31-39, 63]
-        Files.createDirectories(Paths.get("data/output")); // Ensure dir exists 
+        for (Mat t : tiles) t.release();
+
+        Files.createDirectories(Paths.get("data/output"));
         String filename = "mosaic_" + System.currentTimeMillis() + ".png";
-        String outPath = "data/output/" + filename;
-        
+        String outPath  = "data/output/" + filename;
         Imgcodecs.imwrite(outPath, mosaic);
+        mosaic.release();
         return outPath;
-    }
-
-    /**
-     * Finds the best matching tile using BGR Euclidean distance [cite: 9, 49-51].
-     */
-    private Mat bestMatchingTile(Mat region, List<Mat> tiles) {
-        // Compute mean BGR of target region [cite: 40-43]
-        Scalar regionMean = Core.mean(region);
-        
-        Mat bestTile = tiles.get(0);
-        double bestDist = Double.MAX_VALUE;
-
-        for (Mat tile : tiles) {
-            Scalar tileMean = Core.mean(tile); // [cite: 48]    
-            
-            // Euclidean distance in BGR space [cite: 51-57]
-            double dist = Math.sqrt(
-                Math.pow(regionMean.val[0] - tileMean.val[0], 2) +
-                Math.pow(regionMean.val[1] - tileMean.val[1], 2) +
-                Math.pow(regionMean.val[2] - tileMean.val[2], 2)
-            );
-
-            if (dist < bestDist) {
-                bestDist = dist;
-                bestTile = tile;
-            }
-        }
-        return bestTile; // [cite: 63]
     }
 }

@@ -87,7 +87,7 @@
                 </Label>
             </HBox>
 
-            <HBox styleClass="nav-item" onMouseClicked="#handleNavMosaic">
+            <HBox fx:id="navMosaic" styleClass="nav-item" onMouseClicked="#handleNavMosaic">
                 <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
                 <FontIcon iconLiteral="bi-grid" iconSize="16" styleClass="nav-icon-label"/>
                 <Label text="Mosaic" styleClass="nav-label">
@@ -96,7 +96,7 @@
                 <Label text="0" styleClass="nav-count"/>
             </HBox>
 
-            <HBox styleClass="nav-item" onMouseClicked="#handleNavVideo">
+            <HBox fx:id="navVideo" styleClass="nav-item" onMouseClicked="#handleNavVideo">
                 <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
                 <FontIcon iconLiteral="bi-camera-video" iconSize="16" styleClass="nav-icon-label"/>
                 <Label text="Video" styleClass="nav-label">
@@ -105,7 +105,7 @@
                 <Label text="0" styleClass="nav-count"/>
             </HBox>
 
-            <HBox styleClass="nav-item" onMouseClicked="#handleNavShare">
+            <HBox fx:id="navShare" styleClass="nav-item" onMouseClicked="#handleNavShare">
                 <VBox.margin><Insets top="2" right="8" bottom="2" left="8"/></VBox.margin>
                 <FontIcon iconLiteral="bi-share" iconSize="16" styleClass="nav-icon-label"/>
                 <Label text="Share" styleClass="nav-label">
@@ -240,21 +240,45 @@
                 </StackPane>
 
                 <!-- Annotation panel -->
-                <VBox styleClass="annotation-panel">
+                <VBox styleClass="annotation-panel" spacing="8">
+                    <padding><Insets top="12" right="20" bottom="20" left="20"/></padding>
                     <Label text="ANNOTATION" styleClass="annotation-section-label"/>
                     <TextArea fx:id="annotationField"
                               styleClass="annotation-field"
                               promptText="Add a note to this image…"
-                              wrapText="true"/>
-                    <HBox styleClass="annotation-actions" spacing="8" alignment="CENTER_LEFT">
-                        <Button text="Save note" styleClass="btn-primary"
-                                onAction="#handleSaveAnnotation"/>
+                              wrapText="true"
+                              prefHeight="100">
+                        <VBox.vgrow>NEVER</VBox.vgrow>
+                    </TextArea>
+                    <HBox alignment="CENTER_RIGHT" spacing="10">
+                        <padding><Insets top="4"/></padding>
+                        <Label fx:id="annotationFeedbackLabel" text=""
+                               style="-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;">
+                            <HBox.hgrow>ALWAYS</HBox.hgrow>
+                        </Label>
                         <Button text="Delete" styleClass="btn-secondary"
                                 onAction="#handleDeleteAnnotation"/>
+                        <Button text="Save note" styleClass="btn-primary"
+                                onAction="#handleSaveAnnotation"/>
                     </HBox>
                 </VBox>
 
             </VBox>
+
+            <!-- ─── MOSAIC VIEW ───────────────────────────── -->
+            <fx:include fx:id="mosaicView"
+                        source="MosaicView.fxml"
+                        visible="false" managed="false"/>
+
+            <!-- ─── VIDEO VIEW ───────────────────────────── -->
+            <fx:include fx:id="videoView"
+                        source="VideoView.fxml"
+                        visible="false" managed="false"/>
+
+            <!-- ─── SHARE VIEW ──────────────────────────── -->
+            <fx:include fx:id="shareView"
+                        source="ShareView.fxml"
+                        visible="false" managed="false"/>
 
         </StackPane>
     </center>

@@ -12,9 +12,11 @@ import java.util.Set;
 import com.wig3003.photoapp.model.MetadataStore;
 import com.wig3003.photoapp.util.ImageUtils;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.util.Duration;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -43,6 +45,10 @@ import com.wig3003.photoapp.dip.DipEditController;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 // CW: change end
+
+import com.wig3003.photoapp.social.ShareController;
+import com.wig3003.photoapp.synthesis.MosaicController;
+import com.wig3003.photoapp.synthesis.VideoController;
 
 
 public class MainController implements Initializable {
@@ -77,6 +83,7 @@ public class MainController implements Initializable {
     @FXML private StackPane detailImageArea;
     @FXML private ImageView detailImageView;
     @FXML private TextArea annotationField;
+    @FXML private Label annotationFeedbackLabel;
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -104,6 +111,22 @@ public class MainController implements Initializable {
     // CW: cached DipEdit module - load once, reuse on tab switch
     private Parent            dipEditRoot;
     private DipEditController dipEditController;
+
+    // Mosaic view — injected via fx:include in main.fxml
+    @FXML private Parent           mosaicView;
+    @FXML private MosaicController mosaicViewController;
+    @FXML private HBox             navMosaic;
+
+    // Video view — injected via fx:include in main.fxml
+    @FXML private Parent          videoView;
+    @FXML private VideoController videoViewController;
+    @FXML private HBox            navVideo;
+
+    // Share view — injected via fx:include in main.fxml
+    @FXML private Parent          shareView;
+    @FXML private ShareController shareViewController;
+    @FXML private HBox            navShare;
+
     // cached BorderPane root - stored once scene is available
     // Safe to use anytime unlike libraryView.getScene() which returns
     // null when libraryView is swapped out of the BorderPane center
@@ -142,7 +165,7 @@ public class MainController implements Initializable {
         loadAppLibrary();
         // CW: change end
 
-
+        shareViewController.setMainController(this);
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
@@ -249,12 +272,68 @@ public class MainController implements Initializable {
     
 // =========Chyntia: Edit end
 
-    @FXML private void handleNavMosaic() { /* wired by Multimedia module */ }
-    @FXML private void handleNavVideo()  { /* wired by Multimedia module */ }
-    @FXML private void handleNavShare()  { /* wired by Social module */ }
+    @FXML
+    private void handleNavMosaic() {
+        // If DipEdit replaced the center, restore the StackPane first
+        if (mainRoot != null && dipEditRoot != null
+                && mainRoot.getCenter() == dipEditRoot) {
+            restoreLibraryCenter();
+        }
+        libraryView.setVisible(false);
+        libraryView.setManaged(false);
+        detailView.setVisible(false);
+        detailView.setManaged(false);
+        videoView.setVisible(false);
+        videoView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
+        mosaicView.setVisible(true);
+        mosaicView.setManaged(true);
+        mosaicViewController.setLibraryPaths(new ArrayList<>(allPaths));
+        setNavActive(navMosaic);
+    }
+
+    @FXML
+    private void handleNavVideo() {
+        // If DipEdit replaced the center, restore the StackPane first
+        if (mainRoot != null && dipEditRoot != null
+                && mainRoot.getCenter() == dipEditRoot) {
+            restoreLibraryCenter();
+        }
+        libraryView.setVisible(false);
+        libraryView.setManaged(false);
+        detailView.setVisible(false);
+        detailView.setManaged(false);
+        mosaicView.setVisible(false);
+        mosaicView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
+        videoView.setVisible(true);
+        videoView.setManaged(true);
+        videoViewController.setLibraryPaths(new ArrayList<>(allPaths));
+        setNavActive(navVideo);
+    }
+    @FXML
+    public void handleNavShare() {
+        if (mainRoot != null && dipEditRoot != null
+                && mainRoot.getCenter() == dipEditRoot) {
+            restoreLibraryCenter();
+        }
+        libraryView.setVisible(false);
+        libraryView.setManaged(false);
+        detailView.setVisible(false);
+        detailView.setManaged(false);
+        mosaicView.setVisible(false);
+        mosaicView.setManaged(false);
+        videoView.setVisible(false);
+        videoView.setManaged(false);
+        shareView.setVisible(true);
+        shareView.setManaged(true);
+        setNavActive(navShare);
+    }
 
     private void setNavActive(HBox active) {
-        for (HBox item : List.of(navLibrary, navFavorites, navAnnotated)) {
+        for (HBox item : List.of(navLibrary, navFavorites, navAnnotated, navMosaic, navVideo, navShare)) {
             item.getStyleClass().remove("nav-active");
         }
         active.getStyleClass().add("nav-active");
@@ -565,6 +644,12 @@ public class MainController implements Initializable {
     private void showDetailView() {
         libraryView.setVisible(false);
         libraryView.setManaged(false);
+        mosaicView.setVisible(false);
+        mosaicView.setManaged(false);
+        videoView.setVisible(false);
+        videoView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
         detailView.setVisible(true);
         detailView.setManaged(true);
     }
@@ -573,6 +658,12 @@ public class MainController implements Initializable {
     private void showLibraryView() {
         detailView.setVisible(false);
         detailView.setManaged(false);
+        mosaicView.setVisible(false);
+        mosaicView.setManaged(false);
+        videoView.setVisible(false);
+        videoView.setManaged(false);
+        shareView.setVisible(false);
+        shareView.setManaged(false);
         libraryView.setVisible(true);
         libraryView.setManaged(true);
  
@@ -622,24 +713,55 @@ public class MainController implements Initializable {
     @FXML
     private void handleSaveAnnotation() {
         if (currentPath == null) return;
-        MetadataStore.getInstance().saveAnnotation(currentPath, annotationField.getText());
-        refreshAnnotationState();
+        try {
+            MetadataStore.getInstance().saveAnnotation(currentPath, annotationField.getText());
+            annotationFeedbackLabel.setText("✓ Annotated!");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #4A6741; -fx-font-style: italic;");
+            PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
+            pause.setOnFinished(e -> {
+                annotationFeedbackLabel.setText("");
+                annotationFeedbackLabel.setStyle(
+                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
+            });
+            pause.play();
+            updateCounts();
+            refreshGrid();
+            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
+                selectImage(selectedIndex);
+            }
+        } catch (Exception e) {
+            annotationFeedbackLabel.setText("✗ Failed to save");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
+        }
     }
 
     @FXML
     private void handleDeleteAnnotation() {
         if (currentPath == null) return;
-        MetadataStore.getInstance().deleteAnnotation(currentPath);
-        annotationField.clear();
-        refreshAnnotationState();
-    }
-
-    /** Rebuilds thumbnail grid and sidebar counts to reflect annotation changes. */
-    private void refreshAnnotationState() {
-        updateCounts();
-        refreshGrid();
-        if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
-            selectImage(selectedIndex);
+        try {
+            MetadataStore.getInstance().deleteAnnotation(currentPath);
+            annotationField.clear();
+            annotationFeedbackLabel.setText("Annotation removed");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #9C907D; -fx-font-style: italic;");
+            PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
+            pause.setOnFinished(e -> {
+                annotationFeedbackLabel.setText("");
+                annotationFeedbackLabel.setStyle(
+                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
+            });
+            pause.play();
+            updateCounts();
+            refreshGrid();
+            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
+                selectImage(selectedIndex);
+            }
+        } catch (Exception e) {
+            annotationFeedbackLabel.setText("✗ Failed to save");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
         }
     }
 
@@ -647,7 +769,13 @@ public class MainController implements Initializable {
 
     @FXML private void handleNewMosaic() { /* Multimedia module */ }
     @FXML private void handleAnnotate()  { annotationField.requestFocus(); }
-    @FXML private void handleShare()     { /* Social module */ }
+    @FXML
+    private void handleShare() {
+        handleNavShare();
+        if (currentPath != null) {
+            shareViewController.prefillAttachment(currentPath);
+        }
+    }
     @FXML private void handleSearch()    { /* search logic */ }
 
     // ── Keyboard navigation ───────────────────────────────────────────────────

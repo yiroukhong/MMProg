@@ -1,7 +1,9 @@
 package com.wig3003.photoapp.dip;
 
+import com.wig3003.photoapp.dip.aesthetic.DipAestheticController;
 import com.wig3003.photoapp.dip.geometric.DipExtractController;
 import com.wig3003.photoapp.dip.geometric.DipGeometricController;
+import com.wig3003.photoapp.dip.radiometric.DipRadiometricController;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -132,8 +134,11 @@ public class DipEditController {
                     ((DipGeometricController) ctrl).shutdown();
                 } else if (ctrl instanceof DipExtractController) {
                     ((DipExtractController) ctrl).shutdown();
+                } else if (ctrl instanceof DipRadiometricController) {
+                    ((DipRadiometricController) ctrl).shutdown();
+                } else if (ctrl instanceof DipAestheticController) {
+                    ((DipAestheticController) ctrl).shutdown();
                 }
-                // Emily's controllers: add similar calls when ready
             } catch (Exception ignored) {}
         }
         cachedRoots.clear();
@@ -160,6 +165,10 @@ public class DipEditController {
                 ((DipGeometricController) outgoing).onTabDeselected();
             } else if (outgoing instanceof DipExtractController) {
                 ((DipExtractController) outgoing).onTabDeselected();
+            } else if (outgoing instanceof DipRadiometricController) {
+                ((DipRadiometricController) outgoing).onTabDeselected();
+            } else if (outgoing instanceof DipAestheticController) {
+                ((DipAestheticController) outgoing).onTabDeselected();
             }
         }
 
@@ -216,6 +225,10 @@ public class DipEditController {
             ((DipGeometricController) ctrl).onTabSelected();
         } else if (ctrl instanceof DipExtractController) {
             ((DipExtractController) ctrl).onTabSelected();
+        } else if (ctrl instanceof DipRadiometricController) {
+            ((DipRadiometricController) ctrl).onTabSelected();
+        } else if (ctrl instanceof DipAestheticController) {
+            ((DipAestheticController) ctrl).onTabSelected();
         }
     }
 
@@ -236,8 +249,15 @@ public class DipEditController {
                     && ctrl instanceof DipExtractController) {
                 ((DipExtractController) ctrl)
                         .loadImageFromPath(pendingImagePath);
+            } else if (tab.equals("Radiometric")
+                    && ctrl instanceof DipRadiometricController) {
+                ((DipRadiometricController) ctrl)
+                        .loadImageFromPath(pendingImagePath);
+            } else if (tab.equals("Aesthetic")
+                    && ctrl instanceof DipAestheticController) {
+                ((DipAestheticController) ctrl)
+                        .loadImageFromPath(pendingImagePath);
             }
-            // Emily's tabs: add similar calls when her controllers are ready
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -249,8 +269,8 @@ public class DipEditController {
         switch (tab) {
             case "Geometric":   return "DipGeometric.fxml";
             case "Extraction":  return "DipExtract.fxml";
-            case "Radiometric": return null; // Emily
-            case "Aesthetic":   return null; // Emily
+            case "Radiometric": return "DipRadiometric.fxml";
+            case "Aesthetic":   return "DipAesthetic.fxml";
             case "Object":      return null;
             default:            return null;
         }
