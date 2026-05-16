@@ -610,12 +610,13 @@ public class MainController implements Initializable {
 
         userText = annotationTextField.getText();
 
-        // save to MetadataStore
         try {
             if (userText == null || userText.isBlank()) {
                 MetadataStore.getInstance().deleteAnnotation(currentPath);
             } else {
-                MetadataStore.getInstance().saveAnnotation(currentPath, userText);
+                // save text + position as "text||x||y"
+                String toSave = userText + "||" + textX + "||" + textY;
+                MetadataStore.getInstance().saveAnnotation(currentPath, toSave);
             }
             updateCounts();
             refreshGrid();
@@ -623,7 +624,6 @@ public class MainController implements Initializable {
             e.printStackTrace();
         }
 
-        // go back to library
         showLibraryView();
         setNavActive(navLibrary);
     }
@@ -791,13 +791,20 @@ public class MainController implements Initializable {
     // ── Annotation ────────────────────────────────────────────────────────────
 
     private void loadAnnotationForImage(String path) {
-        String text = MetadataStore.getInstance().getAnnotation(path);
-        userText = text != null ? text : "";
+        String saved = MetadataStore.getInstance().getAnnotation(path);
+        if (saved != null && saved.contains("||")) {
+            // parse "text||x||y"
+            String[] parts = saved.split("\\|\\|");
+            userText = parts[0];
+            textX = parts.length > 1 ? Double.parseDouble(parts[1]) : -1;
+            textY = parts.length > 2 ? Double.parseDouble(parts[2]) : -1;
+        } else {
+            userText = saved != null ? saved : "";
+            textX = -1;
+            textY = -1;
+        }
         annotationTextField.setText(userText);
-        textX = -1; 
-        textY = -1;
     }
-
     @FXML
     private void handleApplyAnnotation() {
         if (currentPath == null) return;
@@ -807,7 +814,8 @@ public class MainController implements Initializable {
         redrawCanvas();
 
         try {
-            MetadataStore.getInstance().saveAnnotation(currentPath, userText);
+            String toSave = userText + "||" + textX + "||" + textY;
+            MetadataStore.getInstance().saveAnnotation(currentPath, toSave);
             annotationFeedbackLabel.setText("✓ Applied!");
             annotationFeedbackLabel.setStyle(
                 "-fx-font-size: 12px; -fx-text-fill: #4A6741; -fx-font-style: italic;");
@@ -825,6 +833,8 @@ public class MainController implements Initializable {
     private void handleClearText() {
         if (currentPath == null) return;
         userText = "";
+        textX = -1;
+        textY = -1;
         annotationTextField.clear();
         redrawCanvas();
 
@@ -842,7 +852,6 @@ public class MainController implements Initializable {
             annotationFeedbackLabel.setText("✗ Failed to clear");
         }
     }
-
     private void redrawCanvas() {
         if (annotationCanvas == null) return;
         if (annotationCanvas.getWidth() == 0 || annotationCanvas.getHeight() == 0) return;
