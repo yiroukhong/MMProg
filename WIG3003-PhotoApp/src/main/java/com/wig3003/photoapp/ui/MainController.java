@@ -91,6 +91,9 @@ public class MainController implements Initializable {
 
     private Image originalImage;
     private String userText = "";
+    private double textX = -1;
+    private double textY = -1;
+    private boolean isDraggingText = false;
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -139,29 +142,50 @@ public class MainController implements Initializable {
     // null when libraryView is swapped out of the BorderPane center
     private BorderPane mainRoot;
     // CW: change end
+    private void setupAnnotationDrag() {
+        annotationCanvas.setOnMousePressed(e -> {
+            if (userText == null || userText.isBlank()) return;
+            double dist = Math.hypot(e.getX() - textX, e.getY() - textY);
+            if (dist < 80) isDraggingText = true;
+        });
 
+        annotationCanvas.setOnMouseDragged(e -> {
+            if (!isDraggingText) return;
+            textX = e.getX();
+            textY = e.getY();
+            redrawCanvas();
+        });
+
+        annotationCanvas.setOnMouseReleased(e -> isDraggingText = false);
+    }
     // ── Initialise ────────────────────────────────────────────────────────────
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Bind tile width to the scroll pane's width so tiles stay 5-per-row
-        gridScrollPane.widthProperty().addListener((obs, old, w) -> {
-            double available = w.doubleValue() - 32; // 16px padding each side
-            thumbSize = Math.max(100, (available - 4 * 8) / 5); // 4 gaps of 8px
+
+        // Bind tile width to scroll pane width so tiles stay 5-per-row
+        gridScrollPane.widthProperty().addListener((gridObs, gridOld, gridW) -> {
+            double available = gridW.doubleValue() - 32;
+            thumbSize = Math.max(100, (available - 4 * 8) / 5);
             photoGrid.setPrefTileWidth(thumbSize);
             photoGrid.setPrefTileHeight(thumbSize);
         });
-        detailImageArea.layoutBoundsProperty().addListener(new javafx.beans.value.ChangeListener<javafx.geometry.Bounds>() {
-        @Override
-        public void changed(javafx.beans.value.ObservableValue<? extends javafx.geometry.Bounds> obs,
-                            javafx.geometry.Bounds oldBounds, javafx.geometry.Bounds newBounds) {
-            if (newBounds.getWidth() > 0 && newBounds.getHeight() > 0) {
-                annotationCanvas.setWidth(newBounds.getWidth());
-                annotationCanvas.setHeight(newBounds.getHeight());
-                obs.removeListener(this); // ← fires ONCE then stops
-            }
-        }
-    });
+
+        // One-time layout listener to size the canvas
+        detailImageArea.layoutBoundsProperty().addListener(
+            new javafx.beans.value.ChangeListener<javafx.geometry.Bounds>() {
+                @Override
+                public void changed(
+                        javafx.beans.value.ObservableValue<? extends javafx.geometry.Bounds> boundsObs,
+                        javafx.geometry.Bounds oldBounds,
+                        javafx.geometry.Bounds newBounds) {
+                    if (newBounds.getWidth() > 0 && newBounds.getHeight() > 0) {
+                        annotationCanvas.setWidth(newBounds.getWidth());
+                        annotationCanvas.setHeight(newBounds.getHeight());
+                        boundsObs.removeListener(this);
+                    }
+                }
+            });
 
         // Bind detail ImageView size to its container
         detailImageView.fitWidthProperty().bind(
@@ -169,29 +193,41 @@ public class MainController implements Initializable {
         detailImageView.fitHeightProperty().bind(
                 detailImageArea.heightProperty().subtract(48));
 
-        // CW: cache the BorderPane root once the scene is attached
-            // so navigateToDipEdit and showLibraryView can always access it
-            // even when libraryView is removed from the scene center
-        libraryView.sceneProperty().addListener((obs, oldScene, newScene) -> {
+        // Cache the BorderPane root once the scene is attached
+        libraryView.sceneProperty().addListener((sceneObs, oldScene, newScene) -> {
             if (newScene != null && mainRoot == null) {
                 mainRoot = (BorderPane) newScene.getRoot();
             }
         });
-        // CW: change end
 
-        // CW: load saved Vi-Flow library images on startup
+        // Load saved library images on startup
         loadAppLibrary();
-        // CW: change end
 
         shareViewController.setMainController(this);
 
+        // Set default color picker value
+        fontColorPicker.setValue(javafx.scene.paint.Color.WHITE);
+
         // Live font size label update
-        fontSizeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            fontSizeLabel.setText((int) newVal.doubleValue() + " pt");
+        fontSizeSlider.valueProperty().addListener((sliderObs, sliderOld, sliderNew) -> {
+            fontSizeLabel.setText((int) sliderNew.doubleValue() + " pt");
             if (userText != null && !userText.isBlank()) redrawCanvas();
         });
-    }
 
+        // Live preview — text appears on image as you type
+        annotationTextField.textProperty().addListener((txtObs, txtOld, txtNew) -> {
+            userText = txtNew;
+            redrawCanvas();
+        });
+
+        // Live preview — color change updates image immediately
+        fontColorPicker.valueProperty().addListener((colorObs, colorOld, colorNew) -> {
+            if (userText != null && !userText.isBlank()) redrawCanvas();
+        });
+
+        // Setup drag on canvas
+        setupAnnotationDrag();
+    }
     // ── Navigation ────────────────────────────────────────────────────────────
 
     @FXML
@@ -568,7 +604,29 @@ public class MainController implements Initializable {
         StackPane.setMargin(badge, new Insets(0, 8, 8, 0));
         return badge;
     }
+    @FXML
+    private void handleSaveAndBack() {
+        if (currentPath == null) return;
 
+        userText = annotationTextField.getText();
+
+        // save to MetadataStore
+        try {
+            if (userText == null || userText.isBlank()) {
+                MetadataStore.getInstance().deleteAnnotation(currentPath);
+            } else {
+                MetadataStore.getInstance().saveAnnotation(currentPath, userText);
+            }
+            updateCounts();
+            refreshGrid();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // go back to library
+        showLibraryView();
+        setNavActive(navLibrary);
+    }
     // ── Selection ─────────────────────────────────────────────────────────────
 
     private void selectImage(int index) {
@@ -736,6 +794,8 @@ public class MainController implements Initializable {
         String text = MetadataStore.getInstance().getAnnotation(path);
         userText = text != null ? text : "";
         annotationTextField.setText(userText);
+        textX = -1; 
+        textY = -1;
     }
 
     @FXML
@@ -790,13 +850,11 @@ public class MainController implements Initializable {
         javafx.scene.canvas.GraphicsContext gc = annotationCanvas.getGraphicsContext2D();
         gc.clearRect(0, 0, annotationCanvas.getWidth(), annotationCanvas.getHeight());
 
-        // 1. draw the image
         if (originalImage != null) {
             gc.drawImage(originalImage, 0, 0,
                     annotationCanvas.getWidth(), annotationCanvas.getHeight());
         }
 
-        // 2. draw text on top
         if (userText != null && !userText.isBlank()) {
             int fontSize = (int) fontSizeSlider.getValue();
             javafx.scene.paint.Color color = fontColorPicker.getValue();
@@ -804,10 +862,14 @@ public class MainController implements Initializable {
             gc.setFont(javafx.scene.text.Font.font("Serif", fontSize));
             gc.setFill(color);
 
-            double x = (annotationCanvas.getWidth() / 2)
-                    - (userText.length() * fontSize * 0.3);
-            double y = annotationCanvas.getHeight() - 20;
-            gc.fillText(userText, x, y);
+            // use saved drag position, or default bottom-center
+            if (textX < 0 || textY < 0) {
+                textX = (annotationCanvas.getWidth() / 2)
+                        - (userText.length() * fontSize * 0.3);
+                textY = annotationCanvas.getHeight() - 20;
+            }
+
+            gc.fillText(userText, textX, textY);
         }
     }
     // ── Stub handlers (wired by other modules) ────────────────────────────────

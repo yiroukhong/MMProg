@@ -115,6 +115,7 @@
                     <HBox.hgrow>ALWAYS</HBox.hgrow>
                 </Label>
             </HBox>
+            
 
         </VBox>
     </left>
@@ -245,38 +246,37 @@
                     <Canvas fx:id="annotationCanvas"/>
                 </StackPane>
 
-                <!-- Annotation panel — lecture style: text drawn on image -->
-            <VBox styleClass="annotation-panel" spacing="10"
-                VBox.vgrow="NEVER">
-                <padding><Insets top="12" right="20" bottom="16" left="20"/></padding>
+                <!-- Annotation panel -->
+            <VBox styleClass="annotation-panel" spacing="8" VBox.vgrow="NEVER">
+                <padding><Insets top="10" right="16" bottom="12" left="16"/></padding>
 
                 <Label text="ANNOTATE IMAGE" styleClass="annotation-section-label"/>
 
                 <!-- Text input row -->
                 <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="Text" minWidth="70"
+                    <Label text="Text" minWidth="70" maxWidth="70"
                         style="-fx-text-fill: #888; -fx-font-size: 12px;"/>
                     <TextField fx:id="annotationTextField"
                             promptText="Type annotation text..."
                             HBox.hgrow="ALWAYS"/>
                 </HBox>
 
-                <!-- Font size slider row -->
+                <!-- Font size row -->
                 <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="Font size" minWidth="70"
+                    <Label text="Font size" minWidth="70" maxWidth="70"
                         style="-fx-text-fill: #888; -fx-font-size: 12px;"/>
                     <Slider fx:id="fontSizeSlider" min="10" max="72" value="18"
-                            HBox.hgrow="ALWAYS"
-                            showTickLabels="false" showTickMarks="false"/>
-                    <Label fx:id="fontSizeLabel" text="18 pt" minWidth="40"
+                            HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="fontSizeLabel" text="18 pt"
+                        minWidth="36" maxWidth="36"
                         style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
                 </HBox>
 
                 <!-- Font color row -->
                 <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="Font color" minWidth="70"
+                    <Label text="Font color" minWidth="70" maxWidth="70"
                         style="-fx-text-fill: #888; -fx-font-size: 12px;"/>
-                    <ColorPicker fx:id="fontColorPicker"/>
+                        <ColorPicker fx:id="fontColorPicker" prefWidth="180" minWidth="180" maxWidth="180" prefHeight="32"/>
                 </HBox>
 
                 <!-- Buttons row -->
@@ -287,15 +287,14 @@
                         <HBox.hgrow>ALWAYS</HBox.hgrow>
                     </Label>
                     <Button text="Clear text" styleClass="btn-secondary"
-                            onAction="#handleClearText"/>
-                    <Button text="Apply to image" styleClass="btn-primary"
-                            onAction="#handleApplyAnnotation"/>
+                            onAction="#handleClearText" prefWidth="100"/>
+                    <Button text="Save" styleClass="btn-primary"
+                            onAction="#handleApplyAnnotation" prefWidth="100"/>
                 </HBox>
                 </VBox>
 
             </VBox>
-
-            <!-- ─── MOSAIC VIEW ───────────────────────────── -->
+                        <!-- ─── MOSAIC VIEW ───────────────────────────── -->
             <fx:include fx:id="mosaicView"
                         source="MosaicView.fxml"
                         visible="false" managed="false"/>
