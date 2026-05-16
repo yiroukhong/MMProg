@@ -101,10 +101,16 @@
                                      -fx-border-width:0 0 1 0;">
                             <Label text="FROM"
                                    style="-fx-font-size:10; -fx-font-weight:bold; -fx-text-fill:#9C907D; -fx-min-width:60;"/>
-                            <Label fx:id="fromLabel" text="Loading…"
-                                   style="-fx-font-size:13; -fx-text-fill:#1F1B16;"/>
-                            <Label fx:id="fromEmailLabel" text=""
-                                   style="-fx-font-size:13; -fx-text-fill:#9C907D;"/>
+                            <TextField fx:id="fromField"
+                                       promptText="Your email address"
+                                       HBox.hgrow="ALWAYS"
+                                       style="-fx-background-color:transparent;
+                                              -fx-border-color:transparent;
+                                              -fx-font-size:13;
+                                              -fx-text-fill:#1F1B16;
+                                              -fx-prompt-text-fill:#9C907D;
+                                              -fx-focus-color:transparent;
+                                              -fx-faint-focus-color:transparent;"/>
                         </HBox>
 
                         <!-- TO ROW -->

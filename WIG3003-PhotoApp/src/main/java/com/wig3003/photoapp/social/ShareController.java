@@ -33,8 +33,7 @@ public class ShareController {
     @FXML private Button    retrySendBtn;
     @FXML private Button    sendWithoutLargeBtn;
 
-    @FXML private Label     fromLabel;
-    @FXML private Label     fromEmailLabel;
+    @FXML private TextField fromField;
 
     @FXML private VBox      recipientTagBox;
     @FXML private TextField recipientInput;
@@ -98,20 +97,25 @@ public class ShareController {
         try (FileInputStream fis = new FileInputStream("data/email.properties")) {
             Properties props = new Properties();
             props.load(fis);
-            String email = props.getProperty("mail.user", "");
-            fromEmailLabel.setText(email);
-            if (!email.isEmpty() && email.contains("@")) {
-                String prefix = email.substring(0, email.indexOf('@'));
-                fromLabel.setText(prefix.isEmpty() ? email
-                    : Character.toUpperCase(prefix.charAt(0)) + prefix.substring(1));
-            } else {
-                fromLabel.setText("Not configured");
-                fromEmailLabel.setText("");
-            }
-        } catch (Exception e) {
-            fromLabel.setText("Not configured");
-            fromEmailLabel.setText("");
+            fromField.setText(props.getProperty("mail.user", ""));
+        } catch (Exception ignored) {
+            // leave field empty for the user to fill in
         }
+        fromField.textProperty().addListener((obs, o, n) -> validateSendBtn());
+        fromField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            String text = fromField.getText();
+            if (!isFocused && !text.isBlank() && !text.contains("@")) {
+                fromField.setStyle(
+                    "-fx-background-color:transparent; -fx-border-color:red; -fx-border-radius:4; " +
+                    "-fx-font-size:13; -fx-text-fill:#1F1B16; " +
+                    "-fx-focus-color:transparent; -fx-faint-focus-color:transparent;");
+            } else {
+                fromField.setStyle(
+                    "-fx-background-color:transparent; -fx-border-color:transparent; " +
+                    "-fx-font-size:13; -fx-text-fill:#1F1B16; -fx-prompt-text-fill:#9C907D; " +
+                    "-fx-focus-color:transparent; -fx-faint-focus-color:transparent;");
+            }
+        });
     }
 
     // ── Recipients ────────────────────────────────────────────────────────────
@@ -270,7 +274,10 @@ public class ShareController {
     // ── Validation ────────────────────────────────────────────────────────────
 
     private void validateSendBtn() {
-        sendBtn.setDisable(recipientEmails.isEmpty() || subjectField.getText().isBlank());
+        String from = fromField.getText();
+        sendBtn.setDisable(
+            from.isBlank() || !from.contains("@") ||
+            recipientEmails.isEmpty() || subjectField.getText().isBlank());
     }
 
     // ── Send ──────────────────────────────────────────────────────────────────
@@ -305,7 +312,9 @@ public class ShareController {
             return;
         }
 
-        if (recipientEmails.isEmpty() || subjectField.getText().isBlank()) return;
+        String senderEmail = fromField.getText().trim();
+        if (senderEmail.isBlank() || !senderEmail.contains("@") ||
+                recipientEmails.isEmpty() || subjectField.getText().isBlank()) return;
 
         uploadStatusLabel.setText("Uploading attachments…");
         sendBtn.setDisable(true);
@@ -317,7 +326,7 @@ public class ShareController {
 
         new Thread(() -> {
             try {
-                sendSmtp(recipients, subject, body, files);
+                sendSmtp(senderEmail, recipients, subject, body, files);
                 Platform.runLater(() -> {
                     uploadStatusLabel.setText("");
                     showProgressBars(false);
@@ -370,21 +379,20 @@ public class ShareController {
         }
     }
 
-    private void sendSmtp(List<String> recipients, String subject,
-                           String body, List<File> files) throws Exception {
+    private void sendSmtp(String senderEmail, List<String> recipients,
+                           String subject, String body, List<File> files) throws Exception {
         Properties credentials = new Properties();
         try (FileInputStream fis = new FileInputStream("data/email.properties")) {
             credentials.load(fis);
         } catch (Exception e) {
             throw new Exception(
                 "Could not load data/email.properties. " +
-                "Please create it with mail.user and mail.password entries.");
+                "Please create it with a mail.password entry.");
         }
 
-        String user = credentials.getProperty("mail.user");
         String pass = credentials.getProperty("mail.password");
-        if (user == null || pass == null)
-            throw new Exception("mail.user or mail.password missing in email.properties");
+        if (pass == null)
+            throw new Exception("mail.password missing in email.properties");
 
         Properties smtpProps = new Properties();
         smtpProps.put("mail.smtp.host",            "smtp.gmail.com");
@@ -394,12 +402,12 @@ public class ShareController {
 
         Session session = Session.getInstance(smtpProps, new Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(user, pass);
+                return new PasswordAuthentication(senderEmail, pass);
             }
         });
 
         MimeMessage msg = new MimeMessage(session);
-        msg.setFrom(new InternetAddress(user));
+        msg.setFrom(new InternetAddress(senderEmail));
 
         InternetAddress[] toAddresses = new InternetAddress[recipients.size()];
         for (int i = 0; i < recipients.size(); i++) {
