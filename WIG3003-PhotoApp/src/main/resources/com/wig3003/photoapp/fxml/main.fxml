@@ -16,6 +16,9 @@
 <?import javafx.scene.layout.TilePane?>
 <?import javafx.scene.layout.VBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.Slider?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -211,7 +214,8 @@
 
             <!-- ─── DETAIL VIEW ───────────────────────────────── -->
             <VBox fx:id="detailView" styleClass="detail-view"
-                  visible="false" managed="false">
+                  visible="false" managed="false"
+                  VBox.vgrow="ALWAYS">
 
                 <!-- Detail header -->
                 <!-- Detail header -->
@@ -224,43 +228,69 @@
                     <Button fx:id="heartButton" styleClass="heart-btn"
                             onAction="#handleToggleFavourite">
                     </Button>
-                    <Button text="Annotate" styleClass="btn-secondary"
-                            onAction="#handleAnnotate"/>
                     <Button text="Share" styleClass="btn-secondary"
                             onAction="#handleShare"/>
                 </HBox>
 
                 <!-- Full-res image area (dark canvas) -->
                 <StackPane fx:id="detailImageArea"
-                           styleClass="detail-image-area"
-                           VBox.vgrow="ALWAYS">
+                        styleClass="detail-image-area"
+                        VBox.vgrow="ALWAYS"
+                        minHeight="300"
+                        maxHeight="600">
                     <ImageView fx:id="detailImageView"
-                               preserveRatio="true" smooth="true"
-                               pickOnBounds="true"/>
+                            preserveRatio="true" smooth="true"
+                            pickOnBounds="true"/>
+                    <!-- Canvas sits on top — text + heart drawn here -->
+                    <Canvas fx:id="annotationCanvas"/>
                 </StackPane>
 
-                <!-- Annotation panel -->
-                <VBox styleClass="annotation-panel" spacing="8">
-                    <padding><Insets top="12" right="20" bottom="20" left="20"/></padding>
-                    <Label text="ANNOTATION" styleClass="annotation-section-label"/>
-                    <TextArea fx:id="annotationField"
-                              styleClass="annotation-field"
-                              promptText="Add a note to this image…"
-                              wrapText="true"
-                              prefHeight="100">
-                        <VBox.vgrow>NEVER</VBox.vgrow>
-                    </TextArea>
-                    <HBox alignment="CENTER_RIGHT" spacing="10">
-                        <padding><Insets top="4"/></padding>
-                        <Label fx:id="annotationFeedbackLabel" text=""
-                               style="-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;">
-                            <HBox.hgrow>ALWAYS</HBox.hgrow>
-                        </Label>
-                        <Button text="Delete" styleClass="btn-secondary"
-                                onAction="#handleDeleteAnnotation"/>
-                        <Button text="Save note" styleClass="btn-primary"
-                                onAction="#handleSaveAnnotation"/>
-                    </HBox>
+                <!-- Annotation panel — lecture style: text drawn on image -->
+            <VBox styleClass="annotation-panel" spacing="10"
+                VBox.vgrow="NEVER">
+                <padding><Insets top="12" right="20" bottom="16" left="20"/></padding>
+
+                <Label text="ANNOTATE IMAGE" styleClass="annotation-section-label"/>
+
+                <!-- Text input row -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Text" minWidth="70"
+                        style="-fx-text-fill: #888; -fx-font-size: 12px;"/>
+                    <TextField fx:id="annotationTextField"
+                            promptText="Type annotation text..."
+                            HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <!-- Font size slider row -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Font size" minWidth="70"
+                        style="-fx-text-fill: #888; -fx-font-size: 12px;"/>
+                    <Slider fx:id="fontSizeSlider" min="10" max="72" value="18"
+                            HBox.hgrow="ALWAYS"
+                            showTickLabels="false" showTickMarks="false"/>
+                    <Label fx:id="fontSizeLabel" text="18 pt" minWidth="40"
+                        style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                </HBox>
+
+                <!-- Font color row -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Font color" minWidth="70"
+                        style="-fx-text-fill: #888; -fx-font-size: 12px;"/>
+                    <ColorPicker fx:id="fontColorPicker"/>
+                </HBox>
+
+                <!-- Buttons row -->
+                <HBox alignment="CENTER_RIGHT" spacing="10">
+                    <padding><Insets top="4"/></padding>
+                    <Label fx:id="annotationFeedbackLabel" text=""
+                        style="-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;">
+                        <HBox.hgrow>ALWAYS</HBox.hgrow>
+                    </Label>
+                    <Button text="Clear text" styleClass="btn-secondary"
+                            onAction="#handleClearText"/>
+                    <Button text="Apply to image" styleClass="btn-primary"
+                            onAction="#handleApplyAnnotation"/>
+                </HBox>
                 </VBox>
 
             </VBox>

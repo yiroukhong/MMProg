@@ -82,8 +82,15 @@ public class MainController implements Initializable {
     @FXML private Button heartButton;
     @FXML private StackPane detailImageArea;
     @FXML private ImageView detailImageView;
-    @FXML private TextArea annotationField;
+    @FXML private javafx.scene.canvas.Canvas annotationCanvas;
+    @FXML private javafx.scene.control.TextField annotationTextField;
+    @FXML private javafx.scene.control.Slider fontSizeSlider;
+    @FXML private Label fontSizeLabel;
+    @FXML private javafx.scene.control.ColorPicker fontColorPicker;
     @FXML private Label annotationFeedbackLabel;
+
+    private Image originalImage;
+    private String userText = "";
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -144,6 +151,17 @@ public class MainController implements Initializable {
             photoGrid.setPrefTileWidth(thumbSize);
             photoGrid.setPrefTileHeight(thumbSize);
         });
+        detailImageArea.layoutBoundsProperty().addListener(new javafx.beans.value.ChangeListener<javafx.geometry.Bounds>() {
+        @Override
+        public void changed(javafx.beans.value.ObservableValue<? extends javafx.geometry.Bounds> obs,
+                            javafx.geometry.Bounds oldBounds, javafx.geometry.Bounds newBounds) {
+            if (newBounds.getWidth() > 0 && newBounds.getHeight() > 0) {
+                annotationCanvas.setWidth(newBounds.getWidth());
+                annotationCanvas.setHeight(newBounds.getHeight());
+                obs.removeListener(this); // ← fires ONCE then stops
+            }
+        }
+    });
 
         // Bind detail ImageView size to its container
         detailImageView.fitWidthProperty().bind(
@@ -166,6 +184,12 @@ public class MainController implements Initializable {
         // CW: change end
 
         shareViewController.setMainController(this);
+
+        // Live font size label update
+        fontSizeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            fontSizeLabel.setText((int) newVal.doubleValue() + " pt");
+            if (userText != null && !userText.isBlank()) redrawCanvas();
+        });
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
@@ -623,10 +647,13 @@ public class MainController implements Initializable {
             if (prog.doubleValue() >= 1.0 && !img.isError()) {
                 Platform.runLater(() -> {
                     detailImageView.setImage(img);
+                    originalImage = img;
                     int w = (int) img.getWidth();
                     int h = (int) img.getHeight();
-                    detailDimensions.setText(
-                            String.format("%,d × %,d", w, h));
+                    detailDimensions.setText(String.format("%,d × %,d", w, h));
+                    annotationCanvas.setWidth(detailImageArea.getWidth());
+                    annotationCanvas.setHeight(detailImageArea.getHeight());
+                    redrawCanvas();
                 });
             }
         });
@@ -707,68 +734,86 @@ public class MainController implements Initializable {
 
     private void loadAnnotationForImage(String path) {
         String text = MetadataStore.getInstance().getAnnotation(path);
-        annotationField.setText(text != null ? text : "");
+        userText = text != null ? text : "";
+        annotationTextField.setText(userText);
     }
 
     @FXML
-    private void handleSaveAnnotation() {
+    private void handleApplyAnnotation() {
         if (currentPath == null) return;
+        userText = annotationTextField.getText();
+        if (userText == null || userText.isBlank()) return;
+
+        redrawCanvas();
+
         try {
-            MetadataStore.getInstance().saveAnnotation(currentPath, annotationField.getText());
-            annotationFeedbackLabel.setText("✓ Annotated!");
+            MetadataStore.getInstance().saveAnnotation(currentPath, userText);
+            annotationFeedbackLabel.setText("✓ Applied!");
             annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #4A6741; -fx-font-style: italic;");
+                "-fx-font-size: 12px; -fx-text-fill: #4A6741; -fx-font-style: italic;");
             PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
-            pause.setOnFinished(e -> {
-                annotationFeedbackLabel.setText("");
-                annotationFeedbackLabel.setStyle(
-                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
-            });
+            pause.setOnFinished(e -> annotationFeedbackLabel.setText(""));
             pause.play();
             updateCounts();
             refreshGrid();
-            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
-                selectImage(selectedIndex);
-            }
         } catch (Exception e) {
             annotationFeedbackLabel.setText("✗ Failed to save");
-            annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
         }
     }
 
     @FXML
-    private void handleDeleteAnnotation() {
+    private void handleClearText() {
         if (currentPath == null) return;
+        userText = "";
+        annotationTextField.clear();
+        redrawCanvas();
+
         try {
             MetadataStore.getInstance().deleteAnnotation(currentPath);
-            annotationField.clear();
-            annotationFeedbackLabel.setText("Annotation removed");
+            annotationFeedbackLabel.setText("Annotation cleared.");
             annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #9C907D; -fx-font-style: italic;");
+                "-fx-font-size: 12px; -fx-text-fill: #9C907D; -fx-font-style: italic;");
             PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
-            pause.setOnFinished(e -> {
-                annotationFeedbackLabel.setText("");
-                annotationFeedbackLabel.setStyle(
-                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
-            });
+            pause.setOnFinished(e -> annotationFeedbackLabel.setText(""));
             pause.play();
             updateCounts();
             refreshGrid();
-            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
-                selectImage(selectedIndex);
-            }
         } catch (Exception e) {
-            annotationFeedbackLabel.setText("✗ Failed to save");
-            annotationFeedbackLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
+            annotationFeedbackLabel.setText("✗ Failed to clear");
         }
     }
 
+    private void redrawCanvas() {
+        if (annotationCanvas == null) return;
+        if (annotationCanvas.getWidth() == 0 || annotationCanvas.getHeight() == 0) return;
+
+        javafx.scene.canvas.GraphicsContext gc = annotationCanvas.getGraphicsContext2D();
+        gc.clearRect(0, 0, annotationCanvas.getWidth(), annotationCanvas.getHeight());
+
+        // 1. draw the image
+        if (originalImage != null) {
+            gc.drawImage(originalImage, 0, 0,
+                    annotationCanvas.getWidth(), annotationCanvas.getHeight());
+        }
+
+        // 2. draw text on top
+        if (userText != null && !userText.isBlank()) {
+            int fontSize = (int) fontSizeSlider.getValue();
+            javafx.scene.paint.Color color = fontColorPicker.getValue();
+
+            gc.setFont(javafx.scene.text.Font.font("Serif", fontSize));
+            gc.setFill(color);
+
+            double x = (annotationCanvas.getWidth() / 2)
+                    - (userText.length() * fontSize * 0.3);
+            double y = annotationCanvas.getHeight() - 20;
+            gc.fillText(userText, x, y);
+        }
+    }
     // ── Stub handlers (wired by other modules) ────────────────────────────────
 
     @FXML private void handleNewMosaic() { /* Multimedia module */ }
-    @FXML private void handleAnnotate()  { annotationField.requestFocus(); }
+    @FXML private void handleAnnotate()  { annotationTextField.requestFocus(); }
     @FXML
     private void handleShare() {
         handleNavShare();
