@@ -713,8 +713,28 @@ public class MainController implements Initializable {
     @FXML
     private void handleSaveAnnotation() {
         if (currentPath == null) return;
-        MetadataStore.getInstance().saveAnnotation(currentPath, annotationField.getText());
-        refreshAnnotationState();
+        try {
+            MetadataStore.getInstance().saveAnnotation(currentPath, annotationField.getText());
+            annotationFeedbackLabel.setText("✓ Annotated!");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #4A6741; -fx-font-style: italic;");
+            PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
+            pause.setOnFinished(e -> {
+                annotationFeedbackLabel.setText("");
+                annotationFeedbackLabel.setStyle(
+                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
+            });
+            pause.play();
+            updateCounts();
+            refreshGrid();
+            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
+                selectImage(selectedIndex);
+            }
+        } catch (Exception e) {
+            annotationFeedbackLabel.setText("✗ Failed to save");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
+        }
     }
 
     @FXML
