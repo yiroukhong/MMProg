@@ -740,17 +740,28 @@ public class MainController implements Initializable {
     @FXML
     private void handleDeleteAnnotation() {
         if (currentPath == null) return;
-        MetadataStore.getInstance().deleteAnnotation(currentPath);
-        annotationField.clear();
-        refreshAnnotationState();
-    }
-
-    /** Rebuilds thumbnail grid and sidebar counts to reflect annotation changes. */
-    private void refreshAnnotationState() {
-        updateCounts();
-        refreshGrid();
-        if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
-            selectImage(selectedIndex);
+        try {
+            MetadataStore.getInstance().deleteAnnotation(currentPath);
+            annotationField.clear();
+            annotationFeedbackLabel.setText("Annotation removed");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #9C907D; -fx-font-style: italic;");
+            PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
+            pause.setOnFinished(e -> {
+                annotationFeedbackLabel.setText("");
+                annotationFeedbackLabel.setStyle(
+                        "-fx-font-size: 12px; -fx-text-fill: #6B6051; -fx-font-style: italic;");
+            });
+            pause.play();
+            updateCounts();
+            refreshGrid();
+            if (selectedIndex >= 0 && selectedIndex < displayPaths.size()) {
+                selectImage(selectedIndex);
+            }
+        } catch (Exception e) {
+            annotationFeedbackLabel.setText("✗ Failed to save");
+            annotationFeedbackLabel.setStyle(
+                    "-fx-font-size: 12px; -fx-text-fill: #B0432B; -fx-font-style: italic;");
         }
     }
 
